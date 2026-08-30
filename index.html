@@ -30,7 +30,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             box-sizing: border-box;
         }
-        /* Окно просмотра 3D */
         #monument-preview-box {
             flex: 2;
             height: 650px;
@@ -44,7 +43,6 @@
         #monument-preview-box:active {
             cursor: grabbing;
         }
-        /* Панель настроек */
         #sidebar-controls {
             width: 320px;
             display: flex;
@@ -106,8 +104,7 @@
             text-align: center;
         }
     </style>
-    <!-- Подключаем стабильную версию Three.js через HTTPS CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cloudflare.com"></script>
 </head>
 <body>
 
@@ -160,18 +157,15 @@
     var loadedImage = null;
     var monumentMaterial = null;
 
-    // --- НАСТРОЙКА СКРЫТОГО CANVAS ДЛЯ ТЕКСТУРЫ ГРАВИРОВКИ ---
     var textureCanvas = document.createElement('canvas');
     textureCanvas.width = 1024;
     textureCanvas.height = 1024;
     var ctx = textureCanvas.getContext('2d');
 
     function redrawTexture() {
-        // Базовый цвет плиты
         ctx.fillStyle = '#121212';
         ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
         
-        // Зернистость гранита
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
         for (var i = 0; i < 500; i++) {
             var x = Math.random() * textureCanvas.width;
@@ -179,7 +173,6 @@
             ctx.fillRect(x, y, 2, 2);
         }
 
-        // Отрисовка портрета
         if (loadedImage) {
             ctx.save();
             var imgW = 360;
@@ -208,7 +201,6 @@
             ctx.restore();
         }
 
-        // Отрисовка текста
         var selectedFont = fontSelector.value;
         ctx.fillStyle = '#e0e0e0';
         ctx.textAlign = 'center';
@@ -240,7 +232,6 @@
         }
     }
 
-    // --- НАСТРОЙКА 3D СЦЕНЫ THREE.JS ---
     var scene = new THREE.Scene();
     
     var camera = new THREE.PerspectiveCamera(45, previewBox.clientWidth / previewBox.clientHeight, 0.1, 1000);
@@ -252,7 +243,6 @@
     renderer.shadowMap.enabled = true;
     previewBox.appendChild(renderer.domElement);
 
-    // Освещение
     var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
@@ -265,7 +255,6 @@
     pointLight.position.set(-2, 3, 3);
     scene.add(pointLight);
 
-    // Пол
     var floorGeo = new THREE.PlaneGeometry(10, 10);
     var floorMat = new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.9 });
     var floor = new THREE.Mesh(floorGeo, floorMat);
@@ -274,12 +263,10 @@
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Группа модели
     var monumentGroup = new THREE.Group();
     monumentGroup.position.y = -0.3;
     scene.add(monumentGroup);
 
-    // 1. Подставка памятника
     var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.6);
     var baseMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.2, metalness: 0.1 });
     var baseMesh = new THREE.Mesh(baseGeo, baseMat);
@@ -288,7 +275,6 @@
     baseMesh.receiveShadow = true;
     monumentGroup.add(baseMesh);
 
-    // 2. Стела (Арка)
     var width = 1.1;
     var height = 1.6;
     var shape = new THREE.Shape();
@@ -300,3 +286,20 @@
 
     var extrudeSettings = {
         depth: 0.12,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.015,
+        bevelThickness: 0.015
+    };
+
+    var steleGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    steleGeo.center();
+
+    var canvasTexture = new THREE.CanvasTexture(textureCanvas);
+    monumentMaterial = new THREE.MeshStandardMaterial({
+        map: canvasTexture,
+        roughness: 0.2,
+        metalness: 0.1
+    });
+
