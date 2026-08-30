@@ -151,11 +151,11 @@
             <div class="slider-group">
                 <input type="range" id="photo-size" min="60" max="220" value="140">
             </div>
-            <label>Положение photo (Выше / Ниже)</label>
+            <label>Положение фото (Выше / Ниже)</label>
             <div class="slider-group">
                 <input type="range" id="photo-y" min="20" max="300" value="140">
             </div>
-            <label>Положение photo (Левее / Правее)</label>
+            <label>Положение фото (Левее / Правее)</label>
             <div class="slider-group">
                 <input type="range" id="photo-x" min="50" max="400" value="225">
             </div>
@@ -164,10 +164,10 @@
         <div class="input-group">
             <span class="section-title">2. Выбор шрифта</span>
             <select id="font-selector">
-                <option value="'Times New Roman', Georgia, serif">Академический (с засечками)</option>
-                <option value="'Georgia', serif">Церковнославянский стиль</option>
-                <option value="'Arial Black', sans-serif">Прямой рубленый (Строгий)</option>
-                <option value="'Courier New', monospace">Каллиграфический (Курсив)</option>
+                <option value="Times New Roman">Академический (с засечками)</option>
+                <option value="Georgia">Церковнославянский стиль</option>
+                <option value="Arial Black">Прямой рубленый (Строгий)</option>
+                <option value="Courier New">Каллиграфический (Курсив)</option>
             </select>
         </div>
 
@@ -193,7 +193,6 @@
             <input type="text" id="text-dates" placeholder="1981.11.28 — 19.IV.2001">
         </div>
 
-        <!-- КНОПКА СКАЧИВАНИЯ ГОТОВОГО МАКЕТА -->
         <div class="input-group">
             <span class="section-title">4. Сохранение</span>
             <button id="download-btn" class="download-btn">Скачать готовый макет</button>
@@ -208,7 +207,7 @@
     var inputFio = "";
     var inputDates = "";
     var sourceImage = null;
-    var selectedFontFamily = "'Times New Roman', Georgia, serif";
+    var selectedFontFamily = "Times New Roman";
 
     var sliderPhotoSize = document.getElementById('photo-size');
     var sliderPhotoX = document.getElementById('photo-x');
@@ -294,3 +293,7 @@
             let maskCanvas = document.createElement('canvas');
             maskCanvas.width = w;
             maskCanvas.height = h;
+            let mCtx = maskCanvas.getContext('2d');
+            mCtx.drawImage(tempCanvas, 0, 0);
+
+            mCtx.globalCompositeOperation = 'destination-out';
