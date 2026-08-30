@@ -38,71 +38,74 @@
             position: relative;
             overflow: hidden;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-            cursor: grab;
-        }
-        #monument-preview-box:active {
-            cursor: grabbing;
         }
         #sidebar-controls {
             width: 320px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
             background: #fafafa;
             padding: 20px;
             border-radius: 12px;
             border: 1px solid #e0e0e0;
             box-sizing: border-box;
+            max-height: 650px;
+            overflow-y: auto;
         }
         .section-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #444;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             border-bottom: 2px solid #ddd;
             padding-bottom: 5px;
         }
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
         label {
-            font-size: 13px;
+            font-size: 12px;
             color: #666;
             font-weight: bold;
         }
-        input[type="text"], select {
-            padding: 10px;
+        input[type="text"], select, textarea {
+            padding: 8px 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             outline: none;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            height: 60px;
         }
         .upload-btn {
             background-color: #4CAF50;
             color: white;
-            padding: 12px;
+            padding: 10px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
             display: block;
         }
         .screenshot-btn {
             background-color: #0288d1;
             color: white;
-            padding: 12px;
+            padding: 10px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
             display: block;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         #file-input {
             display: none;
@@ -112,16 +115,17 @@
             color: #0d47a1;
             padding: 10px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.4;
             text-align: center;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-<h1>Онлайн-примерка гравировки на памятник (3D)</h1>
+<h1>Online 3D Monument Customizer</h1>
 
 <div id="main-container">
     <div id="monument-preview-box"></div>
@@ -137,7 +141,7 @@
         </div>
 
         <div class="input-group">
-            <span class="section-title">2. Фотография</span>
+            <span class="section-title">2. Фотография (Лицевая сторона)</span>
             <label for="file-input" class="upload-btn">Загрузить портрет</label>
             <input type="file" id="file-input" accept="image/*">
         </div>
@@ -153,7 +157,7 @@
         </div>
 
         <div class="input-group">
-            <span class="section-title">4. Гравировка текста</span>
+            <span class="section-title">4. Гравировка (Лицевая сторона)</span>
             <label>Фамилия Имя Отчество</label>
             <input type="text" id="text-fio" placeholder="Иванов Иван Иванович">
         </div>
@@ -163,10 +167,16 @@
             <input type="text" id="text-dates" placeholder="10.05.1950 — 22.11.2023">
         </div>
 
+        <div class="input-group">
+            <span class="section-title">5. Гравировка (Обратная сторона)</span>
+            <label>Текст / Эпитафия на обороте</label>
+            <textarea id="text-back" placeholder="Помним, любим, скорбим..."></textarea>
+        </div>
+
         <button class="screenshot-btn" id="screenshot-btn">Скачать скриншот макета</button>
 
         <div class="hint-box">
-            🔄 Зажмите левую кнопку мыши на памятнике, чтобы вращать его и рассмотреть объем. Изменения применяются мгновенно.
+            🔄 Зажмите левую кнопку мыши для вращения. Используйте колесико мыши для приближения и отдаления памятника.
         </div>
     </div>
 </div>
@@ -175,6 +185,7 @@
     var fileInput = document.getElementById('file-input');
     var textFio = document.getElementById('text-fio');
     var textDates = document.getElementById('text-dates');
+    var textBack = document.getElementById('text-back');
     var fontSelector = document.getElementById('font-selector');
     var shapeSelector = document.getElementById('shape-selector');
     var screenshotBtn = document.getElementById('screenshot-btn');
@@ -182,10 +193,12 @@
 
     var loadedImage = null;
     var monumentMaterial = null;
+    var sideMaterial = null;
     var steleMesh = null;
 
+    // Создаем комбинированный холст (лево = лицо, право = задник)
     var textureCanvas = document.createElement('canvas');
-    textureCanvas.width = 1024;
+    textureCanvas.width = 2048;
     textureCanvas.height = 1024;
     var ctx = textureCanvas.getContext('2d');
 
@@ -194,25 +207,44 @@
         ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
         
         ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        for (var i = 0; i < 600; i++) {
+        for (var i = 0; i < 1000; i++) {
             var x = Math.random() * textureCanvas.width;
             var y = Math.random() * textureCanvas.height;
             ctx.fillRect(x, y, 2, 2);
         }
 
+        var selectedFont = fontSelector.value;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        // --- ЛИЦЕВАЯ СТОРОНА ---
         if (loadedImage) {
             ctx.save();
             var imgW = 340;
             var imgH = 440;
-            var imgX = (textureCanvas.width - imgW) / 2;
+            var imgX = (1024 - imgW) / 2;
             var imgY = 100;
 
             ctx.beginPath();
             ctx.ellipse(imgX + imgW/2, imgY + imgH/2, imgW/2, imgH/2, 0, 0, Math.PI * 2);
             ctx.clip();
 
+            var srcX = 0, srcY = 0, srcW = loadedImage.width, srcH = loadedImage.height;
+            var aspectCanvas = imgW / imgH;
+            var aspectImg = loadedImage.width / loadedImage.height;
+
+            if (aspectImg > aspectCanvas) {
+                srcW = loadedImage.height * aspectCanvas;
+                srcX = (loadedImage.width - srcW) / 2;
+            } else {
+                srcH = loadedImage.width / aspectCanvas;
+                srcY = (loadedImage.height - srcH) / 2;
+            }
+
             ctx.filter = 'grayscale(100%) contrast(155%) brightness(115%)';
-            ctx.drawImage(loadedImage, imgX, imgY, imgW, imgH);
+            ctx.drawImage(loadedImage, srcX, srcY, srcW, srcH, imgX, imgY, imgW, imgH);
             ctx.filter = 'none';
 
             var gradient = ctx.createRadialGradient(
@@ -222,33 +254,38 @@
             gradient.addColorStop(0, 'rgba(21,21,21,0)');
             gradient.addColorStop(0.7, 'rgba(21,21,21,0.4)');
             gradient.addColorStop(1, 'rgba(21,21,21,1)');
-            
             ctx.fillStyle = gradient;
             ctx.fillRect(imgX, imgY, imgW, imgH);
             ctx.restore();
         }
 
-        var selectedFont = fontSelector.value;
         ctx.fillStyle = '#dedede';
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px ' + selectedFont;
         
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
         var fioValue = textFio.value || "ИВАНОВ\nИВАН\nИВАНОВИЧ";
         var lines = fioValue.toUpperCase().split(/[\s\n]+/);
         var startY = 640;
         
         for (var j = 0; j < lines.length; j++) {
-            ctx.fillText(lines[j], textureCanvas.width / 2, startY + (j * 54));
+            ctx.fillText(lines[j], 1024 / 2, startY + (j * 54));
         }
 
         ctx.font = 'bold 28px ' + selectedFont;
         var datesValue = textDates.value || "10.05.1950 — 22.11.2023";
-        ctx.fillText(datesValue, textureCanvas.width / 2, startY + (lines.length * 54) + 30);
+        ctx.fillText(datesValue, 1024 / 2, startY + (lines.length * 54) + 30);
+
+        // --- ОБРАТНАЯ СТОРОНА ---
+        ctx.fillStyle = '#c8c8c8';
+        ctx.font = 'italic 32px ' + selectedFont;
+        
+        var backValue = textBack.value || "Помним, любим, скорбим";
+        var backLines = backValue.split('\n');
+        var backStartY = 450 - ((backLines.length - 1) * 25);
+        
+        for (var k = 0; k < backLines.length; k++) {
+            ctx.fillText(backLines[k], 1024 + 512, backStartY + (k * 50));
+        }
         
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
@@ -261,7 +298,7 @@
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(45, previewBox.clientWidth / previewBox.clientHeight, 0.1, 1000);
-    camera.position.set(0, 0.9, 3.8);
+    camera.position.set(0, 0.7, 4.2);
 
     var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(previewBox.clientWidth, previewBox.clientHeight);
@@ -269,20 +306,26 @@
     renderer.shadowMap.enabled = true;
     previewBox.appendChild(renderer.domElement);
 
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 2;
+    controls.maxDistance = 7;
+
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     scene.add(ambientLight);
 
     var dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
-    dirLight.position.set(4, 8, 5);
+    dirLight.position.set(5, 8, 6);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    var pointLight = new THREE.PointLight(0xffffff, 0.35, 10);
-    pointLight.position.set(-3, 3, 4);
+    var pointLight = new THREE.PointLight(0xffffff, 0.25, 10);
+    pointLight.position.set(-4, 3, 5);
     scene.add(pointLight);
 
     var floorGeo = new THREE.PlaneGeometry(12, 12);
-    var floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.85 });
+    var floorMat = new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.9 });
     var floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1.2;
@@ -294,7 +337,7 @@
     scene.add(monumentGroup);
 
     var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.6);
-    var baseMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.25, metalness: 0.1 });
+    var baseMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.2, metalness: 0.1 });
     var baseMesh = new THREE.Mesh(baseGeo, baseMat);
     baseMesh.position.y = -0.6;
     baseMesh.castShadow = true;
@@ -302,17 +345,16 @@
     monumentGroup.add(baseMesh);
 
     var canvasTexture = new THREE.CanvasTexture(textureCanvas);
-    
     monumentMaterial = new THREE.MeshStandardMaterial({
         map: canvasTexture,
-        roughness: 0.2,
-        metalness: 0.1
+        roughness: 0.18,
+        metalness: 0.05
     });
 
-    var sideMaterial = new THREE.MeshStandardMaterial({
-        color: 0x181818,
-        roughness: 0.2,
-        metalness: 0.1
+    sideMaterial = new THREE.MeshStandardMaterial({
+        color: 0x161616,
+        roughness: 0.22,
+        metalness: 0.05
     });
 
     function rebuildMonumentGeometry() {
@@ -356,15 +398,21 @@
         var range = new THREE.Vector2(max.x - min.x, max.y - min.y);
         
         var uvAttribute = steleGeo.attributes.uv;
+        
         for (var i = 0; i < uvAttribute.count; i++) {
-            var u = uvAttribute.getX(i);
-            var v = uvAttribute.getY(i);
-            var z = steleGeo.attributes.position.getZ(i);
+            var posX = steleGeo.attributes.position.getX(i);
+            var posY = steleGeo.attributes.position.getY(i);
+            var posZ = steleGeo.attributes.position.getZ(i);
             
-            if (z > 0.11) {
-                var posX = steleGeo.attributes.position.getX(i);
-                var posY = steleGeo.attributes.position.getY(i);
-                uvAttribute.setXY(i, (posX + offset.x) / range.x, (posY + offset.y) / range.y);
+            var u = (posX + offset.x) / range.x;
+            var v = (posY + offset.y) / range.y;
+
+            if (posZ > 0.08) {
+                // Лицо: левая половина Canvas
+                uvAttribute.setXY(i, u * 0.5, v);
+            } else if (posZ < 0.04) {
+                // Задник: правая половина Canvas с разворотом U против отзеркаливания
+                uvAttribute.setXY(i, 0.5 + (1.0 - u) * 0.5, v);
             }
         }
         uvAttribute.needsUpdate = true;
@@ -385,35 +433,6 @@
     rebuildMonumentGeometry();
     redrawTexture();
 
-    var isDragging = false;
-    var previousMousePosition = { x: 0 };
-
-    previewBox.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        previousMousePosition = { x: e.offsetX };
-    });
-
-    previewBox.addEventListener('mousemove', function(e) {
-        if (isDragging) {
-            var deltaX = e.offsetX - previousMousePosition.x;
-            monumentGroup.rotation.y += deltaX * 0.01;
-            
-            if (monumentGroup.rotation.y > 0.8) monumentGroup.rotation.y = 0.8;
-            if (monumentGroup.rotation.y < -0.8) monumentGroup.rotation.y = -0.8;
-        }
-        previousMousePosition = { x: e.offsetX };
-    });
-
-    window.addEventListener('mouseup', function() {
-        isDragging = false;
-    });
-
-    function smoothReturn() {
-        if (!isDragging) {
-            monumentGroup.rotation.y *= 0.95;
-        }
-    }
-
     fileInput.onchange = function(event) {
         var files = event.target.files;
         if (!files || files.length === 0) return;
@@ -432,20 +451,21 @@
 
     textFio.oninput = redrawTexture;
     textDates.oninput = redrawTexture;
+    textBack.oninput = redrawTexture;
     fontSelector.onchange = redrawTexture;
 
     screenshotBtn.onclick = function() {
         renderer.render(scene, camera);
         var dataURL = renderer.domElement.toDataURL('image/png');
         var link = document.createElement('a');
-        link.download = 'monument_3d_macro.png';
+        link.download = 'monument_3d_render.png';
         link.href = dataURL;
         link.click();
     };
 
     function animate() {
         requestAnimationFrame(animate);
-        smoothReturn();
+        controls.update();
         renderer.render(scene, camera);
     }
     animate();
@@ -458,6 +478,5 @@
         }
     });
 </script>
-
 </body>
 </html>
