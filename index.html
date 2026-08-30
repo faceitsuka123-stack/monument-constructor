@@ -43,7 +43,7 @@
             width: 320px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
             background: #fafafa;
             padding: 20px;
             border-radius: 12px;
@@ -53,28 +53,28 @@
             overflow-y: auto;
         }
         .section-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: bold;
             color: #444;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             border-bottom: 2px solid #ddd;
             padding-bottom: 5px;
         }
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
         label {
-            font-size: 12px;
+            font-size: 13px;
             color: #666;
             font-weight: bold;
         }
         input[type="text"], select, textarea {
-            padding: 8px 10px;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 14px;
             outline: none;
             font-family: inherit;
         }
@@ -85,27 +85,27 @@
         .upload-btn {
             background-color: #4CAF50;
             color: white;
-            padding: 10px;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             text-align: center;
             display: block;
         }
         .screenshot-btn {
             background-color: #0288d1;
             color: white;
-            padding: 10px;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 14px;
             text-align: center;
             display: block;
-            margin-top: 5px;
+            margin-top: 10px;
         }
         #file-input {
             display: none;
@@ -115,17 +115,18 @@
             color: #0d47a1;
             padding: 10px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.4;
             text-align: center;
         }
     </style>
+    <!-- Подключение Three.js и OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-<h1>Online 3D Monument Customizer</h1>
+<h1>Онлайн-примерка гравировки на памятник (3D)</h1>
 
 <div id="main-container">
     <div id="monument-preview-box"></div>
@@ -137,6 +138,7 @@
             <select id="shape-selector">
                 <option value="arc">Арка (скругленная сверху)</option>
                 <option value="rect">Прямоугольник (строгий)</option>
+                <option value="angel">Ангел (фигурный силуэт)</option>
             </select>
         </div>
 
@@ -170,13 +172,13 @@
         <div class="input-group">
             <span class="section-title">5. Гравировка (Обратная сторона)</span>
             <label>Текст / Эпитафия на обороте</label>
-            <textarea id="text-back" placeholder="Помним, любим, скорбим..."></textarea>
+            <textarea id="text-back" placeholder="Помним, любим, скорбим"></textarea>
         </div>
 
         <button class="screenshot-btn" id="screenshot-btn">Скачать скриншот макета</button>
 
         <div class="hint-box">
-            🔄 Зажмите левую кнопку мыши для вращения. Используйте колесико мыши для приближения и отдаления памятника.
+            🔄 Зажмите левую кнопку мыши для вращения на 360°. Используйте колесико мыши для приближения и отдаления.
         </div>
     </div>
 </div>
@@ -192,54 +194,57 @@
     var previewBox = document.getElementById('monument-preview-box');
 
     var loadedImage = null;
-    var monumentMaterial = null;
-    var sideMaterial = null;
+    var canvasTexture = null;
     var steleMesh = null;
 
-    // Создаем комбинированный холст (лево = лицо, право = задник)
+    // Комбинированный холст: левая половина (0..1024) - Лицо, правая половина (1024..2048) - Оборот
     var textureCanvas = document.createElement('canvas');
     textureCanvas.width = 2048;
     textureCanvas.height = 1024;
     var ctx = textureCanvas.getContext('2d');
 
     function redrawTexture() {
+        var currentShape = shapeSelector.value;
+        var selectedFont = fontSelector.value;
+
+        // 1. Очистка и заливка базовым цветом камня (обе стороны)
         ctx.fillStyle = '#151515';
         ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
         
+        // Текстурная крошка гранита
         ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        for (var i = 0; i < 1000; i++) {
+        for (var i = 0; i < 1200; i++) {
             var x = Math.random() * textureCanvas.width;
             var y = Math.random() * textureCanvas.height;
             ctx.fillRect(x, y, 2, 2);
         }
 
-        var selectedFont = fontSelector.value;
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        // --- ЛЕВАЯ ПОЛОВИНА: ЛИЦЕВАЯ СТОРОНА (X от 0 до 1024) ---
+        // Смещение содержимого вправо для формы "Ангел", чтобы надписи не заезжали на силуэт
+        var frontOffset = (currentShape === 'angel') ? 160 : 0;
+        var centerXFront = 512 + frontOffset;
 
-        // --- ЛИЦЕВАЯ СТОРОНА ---
         if (loadedImage) {
             ctx.save();
             var imgW = 340;
             var imgH = 440;
-            var imgX = (1024 - imgW) / 2;
+            var imgX = centerXFront - imgW / 2;
             var imgY = 100;
 
             ctx.beginPath();
             ctx.ellipse(imgX + imgW/2, imgY + imgH/2, imgW/2, imgH/2, 0, 0, Math.PI * 2);
             ctx.clip();
 
+            // Рассчитываем пропорции загруженного изображения (Object-fit: cover)
+            var imgRatio = loadedImage.width / loadedImage.height;
+            var targetRatio = imgW / imgH;
             var srcX = 0, srcY = 0, srcW = loadedImage.width, srcH = loadedImage.height;
-            var aspectCanvas = imgW / imgH;
-            var aspectImg = loadedImage.width / loadedImage.height;
 
-            if (aspectImg > aspectCanvas) {
-                srcW = loadedImage.height * aspectCanvas;
+            if (imgRatio > targetRatio) {
+                srcW = loadedImage.height * targetRatio;
                 srcX = (loadedImage.width - srcW) / 2;
             } else {
-                srcH = loadedImage.width / aspectCanvas;
+                srcH = loadedImage.width / targetRatio;
                 srcY = (loadedImage.height - srcH) / 2;
             }
 
@@ -254,6 +259,7 @@
             gradient.addColorStop(0, 'rgba(21,21,21,0)');
             gradient.addColorStop(0.7, 'rgba(21,21,21,0.4)');
             gradient.addColorStop(1, 'rgba(21,21,21,1)');
+            
             ctx.fillStyle = gradient;
             ctx.fillRect(imgX, imgY, imgW, imgH);
             ctx.restore();
@@ -262,43 +268,51 @@
         ctx.fillStyle = '#dedede';
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px ' + selectedFont;
-        
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
         var fioValue = textFio.value || "ИВАНОВ\nИВАН\nИВАНОВИЧ";
         var lines = fioValue.toUpperCase().split(/[\s\n]+/);
         var startY = 640;
         
         for (var j = 0; j < lines.length; j++) {
-            ctx.fillText(lines[j], 1024 / 2, startY + (j * 54));
+            ctx.fillText(lines[j], centerXFront, startY + (j * 54));
         }
 
         ctx.font = 'bold 28px ' + selectedFont;
         var datesValue = textDates.value || "10.05.1950 — 22.11.2023";
-        ctx.fillText(datesValue, 1024 / 2, startY + (lines.length * 54) + 30);
+        ctx.fillText(datesValue, centerXFront, startY + (lines.length * 54) + 30);
 
-        // --- ОБРАТНАЯ СТОРОНА ---
-        ctx.fillStyle = '#c8c8c8';
+        // --- ПРАВАЯ ПОЛОВИНА: ОБРАТНАЯ СТОРОНА (X от 1024 до 2048) ---
+        // Для ангела на обороте смещаем область текста зеркально (влево), т.к. сторона развернута
+        var backOffset = (currentShape === 'angel') ? -160 : 0;
+        var centerXBack = 1536 + backOffset;
+
         ctx.font = 'italic 32px ' + selectedFont;
-        
         var backValue = textBack.value || "Помним, любим, скорбим";
         var backLines = backValue.split('\n');
-        var backStartY = 450 - ((backLines.length - 1) * 25);
-        
+        var startYBack = 450 - (backLines.length * 25);
+
         for (var k = 0; k < backLines.length; k++) {
-            ctx.fillText(backLines[k], 1024 + 512, backStartY + (k * 50));
+            ctx.fillText(backLines[k], centerXBack, startYBack + (k * 50));
         }
         
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-        if (monumentMaterial && monumentMaterial.map) {
-            monumentMaterial.map.needsUpdate = true;
+        if (canvasTexture) {
+            canvasTexture.needsUpdate = true;
         }
     }
 
+    // Инициализация Three.js сцены
     var scene = new THREE.Scene();
+    
     var camera = new THREE.PerspectiveCamera(45, previewBox.clientWidth / previewBox.clientHeight, 0.1, 1000);
-    camera.position.set(0, 0.7, 4.2);
+    camera.position.set(0, 0.7, 4.6);
 
     var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(previewBox.clientWidth, previewBox.clientHeight);
@@ -306,59 +320,62 @@
     renderer.shadowMap.enabled = true;
     previewBox.appendChild(renderer.domElement);
 
+    // Подключение OrbitControls
     var controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 2;
-    controls.maxDistance = 7;
+    controls.minDistance = 2.0;
+    controls.maxDistance = 8.0;
+    controls.target.set(0, 0, 0);
 
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    // Освещение
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
-    var dirLight = new THREE.DirectionalLight(0xffffff, 0.75);
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(5, 8, 6);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    var pointLight = new THREE.PointLight(0xffffff, 0.25, 10);
-    pointLight.position.set(-4, 3, 5);
+    var pointLight = new THREE.PointLight(0xffffff, 0.4, 10);
+    pointLight.position.set(-3, 3, 4);
     scene.add(pointLight);
 
+    // Земля/Пол
     var floorGeo = new THREE.PlaneGeometry(12, 12);
-    var floorMat = new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.9 });
+    var floorMat = new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.85 });
     var floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1.2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    var monumentGroup = new THREE.Group();
-    monumentGroup.position.y = -0.3;
-    scene.add(monumentGroup);
-
+    // Статичное общее основание (Цоколь)
     var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.6);
-    var baseMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.2, metalness: 0.1 });
+    var baseMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.25, metalness: 0.1 });
     var baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = -0.6;
+    baseMesh.position.set(0, -0.9, 0);
     baseMesh.castShadow = true;
     baseMesh.receiveShadow = true;
-    monumentGroup.add(baseMesh);
+    scene.add(baseMesh);
 
-    var canvasTexture = new THREE.CanvasTexture(textureCanvas);
-    monumentMaterial = new THREE.MeshStandardMaterial({
+    // Создание материалов
+    canvasTexture = new THREE.CanvasTexture(textureCanvas);
+    
+    var monumentMaterial = new THREE.MeshStandardMaterial({
         map: canvasTexture,
-        roughness: 0.18,
-        metalness: 0.05
+        roughness: 0.2,
+        metalness: 0.1
     });
 
-    sideMaterial = new THREE.MeshStandardMaterial({
-        color: 0x161616,
-        roughness: 0.22,
-        metalness: 0.05
+    var sideMaterial = new THREE.MeshStandardMaterial({
+        color: 0x181818,
+        roughness: 0.25,
+        metalness: 0.1
     });
 
     function rebuildMonumentGeometry() {
-        if (steleMesh) monumentGroup.remove(steleMesh);
+        if (steleMesh) scene.remove(steleMesh);
 
         var width = 1.1;
         var height = 1.6;
@@ -369,6 +386,20 @@
             shape.moveTo(-width/2, -height/2);
             shape.lineTo(-width/2, height/2 - width/2);
             shape.absarc(0, height/2 - width/2, width/2, Math.PI, 0, true);
+            shape.lineTo(width/2, -height/2);
+            shape.closePath();
+        } else if (currentShapeType === 'angel') {
+            // Математический силуэт скорбящего ангела слева и ровной плиты справа
+            shape.moveTo(-width/2, -height/2);
+            shape.lineTo(-width/2, -0.4);
+            // Плавные изгибы крыла и силуэта спины
+            shape.quadraticCurveTo(-width/2 - 0.1, -0.1, -width/2 + 0.05, 0.2);
+            shape.quadraticCurveTo(-width/2 - 0.2, 0.4, -width/3, 0.6);
+            shape.quadraticCurveTo(-width/4, 0.7, -width/5, 0.75);
+            // Голова/округление сверху
+            shape.absarc(-width/8, 0.65, 0.12, Math.PI, 0, true);
+            // Плавный переход к ровному правому краю плиты
+            shape.quadraticCurveTo(0, 0.8, width/2, 0.8);
             shape.lineTo(width/2, -height/2);
             shape.closePath();
         } else {
@@ -382,7 +413,7 @@
         var extrudeSettings = {
             depth: 0.12,
             bevelEnabled: true,
-            bevelSegments: 3,
+            bevelSegments: 4,
             steps: 1,
             bevelSize: 0.015,
             bevelThickness: 0.015
@@ -394,35 +425,41 @@
         var bbox = steleGeo.boundingBox;
         var max = bbox.max;
         var min = bbox.min;
-        var offset = new THREE.Vector2(-min.x, -min.y);
-        var range = new THREE.Vector2(max.x - min.x, max.y - min.y);
+        var rangeX = max.x - min.x;
+        var rangeY = max.y - min.y;
         
         var uvAttribute = steleGeo.attributes.uv;
-        
-        for (var i = 0; i < uvAttribute.count; i++) {
-            var posX = steleGeo.attributes.position.getX(i);
-            var posY = steleGeo.attributes.position.getY(i);
-            var posZ = steleGeo.attributes.position.getZ(i);
-            
-            var u = (posX + offset.x) / range.x;
-            var v = (posY + offset.y) / range.y;
+        var posAttribute = steleGeo.attributes.position;
 
-            if (posZ > 0.08) {
-                // Лицо: левая половина Canvas
-                uvAttribute.setXY(i, u * 0.5, v);
-            } else if (posZ < 0.04) {
-                // Задник: правая половина Canvas с разворотом U против отзеркаливания
-                uvAttribute.setXY(i, 0.5 + (1.0 - u) * 0.5, v);
+        for (var i = 0; i < uvAttribute.count; i++) {
+            var posX = posAttribute.getX(i);
+            var posY = posAttribute.getY(i);
+            var posZ = posAttribute.getZ(i);
+            
+            // Наложение текстур: Лицо (Z > 0.11), Оборот (Z < 0.01), Торцы - чистый камень
+            if (posZ > 0.11) {
+                // Лицевая грань: маппим в левую половину холста (U: 0.0 -> 0.5)
+                var uFront = (posX - min.x) / rangeX * 0.5;
+                var vFront = (posY - min.y) / rangeY;
+                uvAttribute.setXY(i, uFront, vFront);
+            } else if (posZ < 0.01) {
+                // Обратная грань: маппим в правую половину холста (U: 0.5 -> 1.0) с инверсией X
+                var uBack = 0.5 + (1.0 - (posX - min.x) / rangeX) * 0.5;
+                var vBack = (posY - min.y) / rangeY;
+                uvAttribute.setXY(i, uBack, vBack);
+            } else {
+                // Торцы сдвигаем в невидимую зону или даем фиксированные координаты для sideMaterial
+                uvAttribute.setXY(i, 0, 0);
             }
         }
         uvAttribute.needsUpdate = true;
         steleGeo.center();
 
         steleMesh = new THREE.Mesh(steleGeo, [monumentMaterial, sideMaterial]);
-        steleMesh.position.set(0, 0.3, 0);
+        steleMesh.position.set(0, 0, 0);
         steleMesh.castShadow = true;
         steleMesh.receiveShadow = true;
-        monumentGroup.add(steleMesh);
+        scene.add(steleMesh);
     }
 
     shapeSelector.onchange = function() {
@@ -433,6 +470,7 @@
     rebuildMonumentGeometry();
     redrawTexture();
 
+    // Загрузка фото портрета
     fileInput.onchange = function(event) {
         var files = event.target.files;
         if (!files || files.length === 0) return;
@@ -449,20 +487,23 @@
         reader.readAsDataURL(files[0]);
     };
 
+    // Слушатели ввода данных
     textFio.oninput = redrawTexture;
     textDates.oninput = redrawTexture;
     textBack.oninput = redrawTexture;
     fontSelector.onchange = redrawTexture;
 
+    // Скриншот
     screenshotBtn.onclick = function() {
         renderer.render(scene, camera);
         var dataURL = renderer.domElement.toDataURL('image/png');
         var link = document.createElement('a');
-        link.download = 'monument_3d_render.png';
+        link.download = 'monument_3d_design.png';
         link.href = dataURL;
         link.click();
     };
 
+    // Анимационный цикл
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
@@ -470,6 +511,7 @@
     }
     animate();
 
+    // Ресайз окна браузера
     window.addEventListener('resize', function() {
         if (previewBox.clientWidth && previewBox.clientHeight) {
             camera.aspect = previewBox.clientWidth / previewBox.clientHeight;
