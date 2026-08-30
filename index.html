@@ -108,6 +108,23 @@
             text-align: center;
             display: block;
         }
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
         #file-input {
             display: none;
         }
@@ -134,11 +151,11 @@
             <div class="slider-group">
                 <input type="range" id="photo-size" min="60" max="220" value="140">
             </div>
-            <label>Положение фото (Выше / Ниже)</label>
+            <label>Положение photo (Выше / Ниже)</label>
             <div class="slider-group">
                 <input type="range" id="photo-y" min="20" max="300" value="140">
             </div>
-            <label>Положение фото (Левее / Правее)</label>
+            <label>Положение photo (Левее / Правее)</label>
             <div class="slider-group">
                 <input type="range" id="photo-x" min="50" max="400" value="225">
             </div>
@@ -175,6 +192,12 @@
             <label>Даты жизни</label>
             <input type="text" id="text-dates" placeholder="1981.11.28 — 19.IV.2001">
         </div>
+
+        <!-- КНОПКА СКАЧИВАНИЯ ГОТОВОГО МАКЕТА -->
+        <div class="input-group">
+            <span class="section-title">4. Сохранение</span>
+            <button id="download-btn" class="download-btn">Скачать готовый макет</button>
+        </div>
     </div>
 </div>
 
@@ -193,6 +216,7 @@
     var sliderTextSize = document.getElementById('text-size');
     var sliderTextY = document.getElementById('text-y');
     var fontSelector = document.getElementById('font-selector');
+    var downloadBtn = document.getElementById('download-btn');
 
     function renderMonument() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -270,25 +294,3 @@
             let maskCanvas = document.createElement('canvas');
             maskCanvas.width = w;
             maskCanvas.height = h;
-            let mCtx = maskCanvas.getContext('2d');
-            mCtx.drawImage(tempCanvas, 0, 0);
-
-            mCtx.globalCompositeOperation = 'destination-out';
-            let maskGrad = mCtx.createRadialGradient(w/2, h/2, w/3, w/2, h/2, w/2);
-            maskGrad.addColorStop(0, 'rgba(0,0,0,0)');
-            maskGrad.addColorStop(0.7, 'rgba(0,0,0,0.6)');
-            maskGrad.addColorStop(1, 'rgba(0,0,0,1)');
-            mCtx.fillStyle = maskGrad;
-            mCtx.fillRect(0, 0, w, h);
-
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.drawImage(maskCanvas, pX - w/2, pY - h/2);
-            ctx.restore();
-        }
-
-        // 4. Отрисовка текста гравировки
-        ctx.save();
-        ctx.textAlign = "center";
-        ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 1;
