@@ -30,18 +30,21 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             box-sizing: border-box;
         }
-        /* Большое 3D окно */
         #monument-preview-box {
             flex: 2;
             height: 650px;
             background-color: #1a1a1a;
             border-radius: 12px;
-            overflow: hidden;
-            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+            cursor: move;
         }
-        #canvas-container {
-            width: 100%;
-            height: 100%;
+        canvas {
+            background-color: #1a1a1a;
+            display: block;
+            border-radius: 8px;
         }
         #sidebar-controls {
             width: 340px;
@@ -105,21 +108,16 @@
             font-weight: bold;
         }
     </style>
-    <!-- Подключаем официальные проверенные 3D скрипты Three.js -->
-    <script src="https://cloudflare.com"></script>
-    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
 
 <h1>Онлайн 3D-примерка гравировки на памятник</h1>
 
 <div id="main-container">
-    <!-- Окно 3D просмотра -->
     <div id="monument-preview-box">
-        <div id="canvas-container"></div>
+        <canvas id="monumentCanvas" width="450" height="600"></canvas>
     </div>
     
-    <!-- Панель управления -->
     <div id="sidebar-controls">
         <div class="input-group">
             <span class="section-title">1. Фотография</span>
@@ -139,137 +137,86 @@
         </div>
 
         <div class="hint-box">
-            🔄 Зажмите левую кнопку мыши внутри 3D-окна и двигайте её, чтобы вращать памятник со всех сторон!
+            🔄 Зажмите левую кнопку мыши внутри левого окна и двигайте её, чтобы плавно вращать памятник в 3D со всех сторон!
         </div>
     </div>
 </div>
 
 <script>
-    var container = document.getElementById('canvas-container');
-    var wrapper = document.getElementById('monument-preview-box');
-    
-    // Переменные данных пользователя
+    var canvas = document.getElementById('monumentCanvas');
+    var ctx = canvas.getContext('2d');
+    var previewBox = document.getElementById('monument-preview-box');
+
     var inputFio = "";
     var inputDates = "";
     var userImage = null;
 
-    // Инициализация 3D сцены
-    var scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+    // Параметры 3D камеры и вращения
+    var angleX = -0.25; 
+    var angleY = 0.4;  
+    var isDragging = false;
+    var previousMousePosition = { x: 0, y: 0 };
 
-    // Камера
-    var camera = new THREE.PerspectiveCamera(45, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
-    camera.position.set(0, 2.5, 6);
-
-    // Рендерер
-    var renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    // Управление вращением OrbitControls
-    var controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Запрет уходить под землю
-    controls.minDistance = 3;
-    controls.maxDistance = 8;
-    controls.target.set(0, 1.2, 0);
-
-    // Свет
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-
-    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
-
-    // Земля (подложка под памятником)
-    var floorGeo = new THREE.PlaneGeometry(20, 20);
-    var floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-    var floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // Создаем виртуальный холст (текстуру) для лица памятника
+    // Создаем холст текстуры для лицевой стороны (512x512)
     var textureCanvas = document.createElement('canvas');
-    var tCtx = textureCanvas.getContext('2d');
     textureCanvas.width = 512;
     textureCanvas.height = 512;
+    var tCtx = textureCanvas.getContext('2d');
 
-    var steleTexture = new THREE.CanvasTexture(textureCanvas);
-
-    // Базовый материал полированного черного гранита
-    var graniteMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111111,
-        roughness: 0.1,
-        metalness: 0.1
-    });
-
-    // Материал для лицевой грани (куда идет наша динамическая текстура)
-    var faceMaterial = new THREE.MeshStandardMaterial({
-        map: steleTexture,
-        roughness: 0.15,
-        metalness: 0.05
-    });
-
-    // Накладываем материалы на 6 граней стелы [право, лево, верх, низ, лицо, зад]
-    var steleMaterials = [
-        graniteMaterial, graniteMaterial, graniteMaterial, graniteMaterial, faceMaterial, graniteMaterial
+    // Математическая 3D-модель (Вершины)
+    // Вершины Стелы (0-7)
+    var steleBaseVertices = [
+        {x: -60, y: -180, z: -15}, {x: 60, y: -180, z: -15}, {x: 60, y: 80, z: -15}, {x: -60, y: 80, z: -15},
+        {x: -60, y: -180, z: 15},  {x: 60, y: -180, z: 15},  {x: 60, y: 80, z: 15},  {x: -60, y: 80, z: 15}
+    ];
+    // Вершины Тумбы (8-15)
+    var baseVertices = [
+        {x: -85, y: 80, z: -30},  {x: 85, y: 80, z: -30},  {x: 85, y: 110, z: -30},  {x: -85, y: 110, z: -30},
+        {x: -85, y: 80, z: 30},   {x: 85, y: 80, z: 30},   {x: 85, y: 110, z: 30},   {x: -85, y: 110, z: 30}
     ];
 
-    // Геометрия и создание 3D Стелы (ширина: 1.2, высота: 2.1, толщина: 0.25)
-    var steleGeo = new THREE.BoxGeometry(1.2, 2.1, 0.25);
-    var stele = new THREE.Mesh(steleGeo, steleMaterials);
-    stele.position.y = 1.25;
-    stele.castShadow = true;
-    scene.add(stele);
+    function project(vertex) {
+        // Поворот по оси Y
+        var x1 = vertex.x * Math.cos(angleY) - vertex.z * Math.sin(angleY);
+        var z1 = vertex.x * Math.sin(angleY) + vertex.z * Math.cos(angleY);
+        // Поворот по оси X
+        var y2 = vertex.y * Math.cos(angleX) - z1 * Math.sin(angleX);
+        var z2 = vertex.y * Math.sin(angleX) + z1 * Math.cos(angleX);
 
-    // Создание 3D Тумбы-основания
-    var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.5);
-    var base = new THREE.Mesh(baseGeo, graniteMaterial);
-    base.position.y = 0.1;
-    base.castShadow = true;
-    base.receiveShadow = true;
-    scene.add(base);
+        var distance = 450;
+        var scale = distance / (distance + z2) * 1.3;
+        return {
+            x: x1 * scale + canvas.width / 2,
+            y: y2 * scale + canvas.height / 2 + 30,
+            z: z2
+        };
+    }
 
-    // Функция генерации текстуры (Фото + Текст)
-    function updateMonumentTexture() {
-        // Заливка плиты цветом камня габбро
-        tCtx.fillStyle = "#161616";
+    function updateTexture() {
+        tCtx.fillStyle = "#222222";
         tCtx.fillRect(0, 0, 512, 512);
 
-        // 1. Рисуем портрет с эффектом гравировки и растушевки
+        // Отрисовка портрета
         if (userImage) {
             var aspect = userImage.width / userImage.height;
-            var w = 220;
-            var h = w / aspect;
+            var w = 240; var h = w / aspect;
             if (h > 260) { h = 260; w = h * aspect; }
-            
-            var x = (512 - w) / 2;
-            var y = 40;
+            var x = (512 - w) / 2; var y = 50;
 
-            // Временный холст для наложения ЧБ-фильтра
             var tempCanvas = document.createElement('canvas');
-            tempCanvas.width = w;
-            tempCanvas.height = h;
+            tempCanvas.width = w; tempCanvas.height = h;
             var tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(userImage, 0, 0, w, h);
 
-            // Алгоритм лазерного скола
             var imgData = tempCtx.getImageData(0, 0, w, h);
             var data = imgData.data;
             for (var i = 0; i < data.length; i += 4) {
                 var b = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                b = b > 120 ? Math.min(255, b * 1.4) : Math.max(40, b * 0.35);
+                b = b > 120 ? Math.min(255, b * 1.4) : Math.max(45, b * 0.35);
                 data[i] = b; data[i + 1] = b; data[i + 2] = b;
             }
             tempCtx.putImageData(imgData, 0, 0);
 
-            // Радиальная растушевка краев портрета в овал
             tCtx.save();
             tCtx.beginPath();
             tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
@@ -277,26 +224,58 @@
             tCtx.drawImage(tempCanvas, x, y);
             tCtx.restore();
 
-            // Мягкая контурная рамка овала
             tCtx.strokeStyle = "rgba(255,255,255,0.15)";
-            tCtx.lineWidth = 2;
-            tCtx.beginPath();
-            tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
-            tCtx.stroke();
+            tCtx.beginPath(); tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2); tCtx.stroke();
         }
 
-        // 2. Наносим текст гравировки (ФИО и Даты) строго под фото
+        // Отрисовка текста
         tCtx.fillStyle = "#dedede";
         tCtx.textAlign = "center";
-        tCtx.font = "bold 22px 'Times New Roman', Georgia, serif";
+        tCtx.font = "bold 24px 'Times New Roman', Georgia, serif";
 
         var lines = inputFio.toUpperCase().split(" ");
         var startY = 340;
         lines.forEach(function(line, index) {
             var spacedLine = line.split("").join(" ");
-            tCtx.fillText(spacedLine, 256, startY + (index * 28));
+            tCtx.fillText(spacedLine, 256, startY + (index * 30));
         });
 
-        // Даты жизни
         tCtx.font = "bold 16px 'Times New Roman', Georgia, serif";
         tCtx.fillStyle = "#b8b8b8";
+        tCtx.fillText(inputDates, 256, 470);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Рисуем сетку земли
+        ctx.strokeStyle = '#2b2b2b';
+        ctx.lineWidth = 1;
+        for(var i = -4; i <= 4; i++) {
+            var p1 = project({x: i*50, y: 110, z: -200}); var p2 = project({x: i*50, y: 110, z: 200});
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            var p3 = project({x: -200, y: 110, z: i*50}); var p4 = project({x: 200, y: 110, z: i*50});
+            ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+        }
+
+        var pStele = steleBaseVertices.map(project);
+        var pBase = baseVertices.map(project);
+
+        // Сборка 3D полигонов
+        var polygons = [
+            // Тумба
+            { pts: [pBase[0], pBase[1], pBase[2], pBase[3]], color: '#151515', front: false },
+            { pts: [pBase[1], pBase[5], pBase[6], pBase[2]], color: '#252525', front: false },
+            { pts: [pBase[5], pBase[4], pBase[7], pBase[6]], color: '#1a1a1a', front: false },
+            { pts: [pBase[4], pBase[0], pBase[3], pBase[7]], color: '#0d0d0d', front: false },
+            { pts: [pBase[3], pBase[2], pBase[6], pBase[7]], color: '#2a2a2a', front: false },
+            // Стела
+            { pts: [pStele[0], pStele[1], pStele[2], pStele[3]], color: '#1a1a1a', front: false }, // Задняя
+            { pts: [pStele[1], pStele[5], pStele[6], pStele[2]], color: '#383838', front: false }, // Правая
+            { pts: [pStele[5], pStele[4], pStele[7], pStele[6]], color: '#222222', front: false }, // Лицевая (под маску)
+            { pts: [pStele[4], pStele[0], pStele[3], pStele[7]], color: '#151515', front: false }, // Левая
+            { pts: [pStele[3], pStele[2], pStele[6], pStele[7]], color: '#454545', front: false }  // Верхний торец
+        ];
+
+        // Расчет глубины для сортировки (Z-буфер)
+        polygons.forEach(function(poly) {
