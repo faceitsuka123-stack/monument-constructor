@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Конструктор Памятника</title>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #main-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        #monument-preview-box {
+            flex: 2;
+            height: 650px;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        }
+        #sidebar-controls {
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            box-sizing: border-box;
+            max-height: 650px;
+            overflow-y: auto;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #222;
+            margin-bottom: 4px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        label {
+            font-size: 13px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            height: 50px;
+        }
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            text-align: center;
+            display: block;
+        }
+        .screenshot-btn {
+            background-color: #0288d1;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+        }
+        .order-btn {
+            background-color: #ff5722;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+        }
+        #file-input, #glb-input {
+            display: none;
+        }
+        .hint-box {
+            background: #e3f2fd;
+            color: #0d47a1;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+            text-align: center;
+        }
+    </style>
+    <!-- Подключение Three.js, OrbitControls и GLTFLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+
+<h1>Онлайн-конструктор памятников (3D Pro)</h1>
+
+<div id="main-container">
+    <div id="monument-preview-box"></div>
+    
+    <div id="sidebar-controls">
+        <div class="input-group">
+            <span class="section-title">1. Форма памятника</span>
+            <select id="shape-selector">
+                <option value="arc">Арка (скругленная сверху)</option>
+                <option value="rect">Прямоугольник (строгий)</option>
+                <option value="angel">Ангел (фигурный силуэт)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">2. Материал (Тип гранита)</span>
+            <select id="material-selector">
+                <option value="gabbro">Габбро-диабаз (Глубокий черный)</option>
+                <option value="dymov">Дымовский (Премиальный красно-коричневый)</option>
+                <option value="pokost">Покостовский (Светло-серый гранит)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">3. Художественный декор</span>
+            <select id="decor-selector">
+                <option value="none">Без декора</option>
+                <option value="cross">Православный крест (вверху)</option>
+                <option value="branches">Ветви памяти (внизу)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">4. Цвет гравировки</span>
+            <select id="engrave-color-selector">
+                <option value="white">Матовый белый (Скарпель)</option>
+                <option value="gold">Сусальное золото (Блестящее)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">5. Текст лицевой стороны</span>
+            <label>Шрифт надписи</label>
+            <select id="font-selector">
+                <option value="'Times New Roman', Georgia, serif">Академический (с засечками)</option>
+                <option value="'Georgia', serif">Церковнославянский стиль</option>
+                <option value="'Arial Black', sans-serif">Прямой рубленый (Строгий)</option>
+                <option value="cursive, serif">Каллиграфический (Курсив)</option>
+            </select>
+            <label>Фамилия Имя Отчество</label>
+            <input type="text" id="text-fio" placeholder="Иванов Иван Иванович">
+            <label>Даты жизни</label>
+            <input type="text" id="text-dates" placeholder="10.05.1950 — 22.11.2023">
+            <label for="file-input" class="upload-btn">Загрузить портрет</label>
+            <input type="file" id="file-input" accept="image/*">
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">6. Эпитафия на обороте</span>
+            <textarea id="text-back" placeholder="Помним, любим, скорбим"></textarea>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">7. Своя 3D-модель</span>
+            <label for="glb-input" class="upload-btn" style="background-color: #673ab7;">Загрузить свой .GLB файл</label>
+            <input type="file" id="glb-input" accept=".glb">
+        </div>
+
+        <button class="screenshot-btn" id="screenshot-btn">Скачать скриншот макета</button>
+        <button class="order-btn" id="order-btn">Отправить заказ менеджеру</button>
+
+        <div class="hint-box">
+            🔄 Зажмите левую мышь для вращения. Колесико — зум. При переключении форм памятник больше не взлетает!
+        </div>
+    </div>
+</div>
+
+<script>
+    var fileInput = document.getElementById('file-input');
+    var glbInput = document.getElementById('glb-input');
+    var textFio = document.getElementById('text-fio');
+    var textDates = document.getElementById('text-dates');
+    var textBack = document.getElementById('text-back');
+    var fontSelector = document.getElementById('font-selector');
+    var shapeSelector = document.getElementById('shape-selector');
+    var materialSelector = document.getElementById('material-selector');
+    var decorSelector = document.getElementById('decor-selector');
+    var engraveColorSelector = document.getElementById('engrave-color-selector');
+    var screenshotBtn = document.getElementById('screenshot-btn');
+    var orderBtn = document.getElementById('order-btn');
+    var previewBox = document.getElementById('monument-preview-box');
+
+    var loadedImage = null;
+    var canvasTexture = null;
+    var steleMesh = null;
+    var customModelMesh = null;
+
+    // Палитра камней
+    var stoneColors = {
+        gabbro: '#151515',
+        dymov: '#3d231d',
+        pokost: '#707070'
+    };
+
+    // HD Холст 4096х2048 для идеальной резкости
+    var textureCanvas = document.createElement('canvas');
+    textureCanvas.width = 4096;
+    textureCanvas.height = 2048;
+    var ctx = textureCanvas.getContext('2d');
+
+    function redrawTexture() {
+        var currentShape = shapeSelector.value;
+        var selectedFont = fontSelector.value;
+        var stoneKey = materialSelector.value;
+        var decorKey = decorSelector.value;
+        var engraveKey = engraveColorSelector.value;
+
+        var baseColor = stoneColors[stoneKey] || stoneColors.gabbro;
+
+        // Заливка базовым цветом камня
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+        
+        // Шумовая гранитная крошка
+        ctx.fillStyle = stoneKey === 'pokost' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.02)';
+        for (var i = 0; i < 4000; i++) {
+            var x = Math.random() * textureCanvas.width;
+            var y = Math.random() * textureCanvas.height;
+            ctx.fillRect(x, y, 3, 3);
+        }
+
+        // ЛЕВАЯ ПОЛОВИНА: ЛИЦЕВАЯ СТОРОНА (0..2048)
+        var frontOffset = (currentShape === 'angel' && !customModelMesh) ? 320 : 0;
+        var centerXFront = 1024 + frontOffset;
+
+        // Рисуем декор (Крест)
+        var portraitYOffset = 0;
+        if (decorKey === 'cross') {
+            ctx.fillStyle = engraveKey === 'gold' ? '#ffd700' : '#dedede';
+            ctx.shadowColor = '#000000';
+            ctx.shadowBlur = 6;
+            
+            // Простой православный крест
+            ctx.fillRect(centerXFront - 15, 120, 30, 220); // Вертикаль
+            ctx.fillRect(centerXFront - 90, 170, 180, 24); // Главная перекладина
+            ctx.fillRect(centerXFront - 50, 130, 100, 18); // Верхняя перекладина
+            
+            // Косая нижняя перекладина
+            ctx.save();
+            ctx.translate(centerXFront, 290);
+            ctx.rotate(Math.PI / 6);
+            ctx.fillRect(-45, -9, 90, 18);
+            ctx.restore();
+            
+            portraitYOffset = 250; // Сдвигаем портрет вниз
+        }
+
+        // Рисуем декор (Ветви памяти внизу)
+        if (decorKey === 'branches') {
+            ctx.fillStyle = engraveKey === 'gold' ? '#ffd700' : '#dedede';
+            ctx.font = 'italic 50px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🌿 ═════════ 🌿', centerXFront, 1920);
+        }
+
+        // Портрет
+        if (loadedImage) {
+            ctx.save();
+            var imgW = 680;
+            var imgH = 880;
+            var imgX = centerXFront - imgW / 2;
+            var imgY = 200 + portraitYOffset;
+
+            ctx.beginPath();
+            ctx.ellipse(imgX + imgW/2, imgY + imgH/2, imgW/2, imgH/2, 0, 0, Math.PI * 2);
+            ctx.clip();
+
+            var imgRatio = loadedImage.width / loadedImage.height;
+            var targetRatio = imgW / imgH;
+            var srcX = 0, srcY = 0, srcW = loadedImage.width, srcH = loadedImage.height;
+
+            if (imgRatio > targetRatio) {
+                srcW = loadedImage.height * targetRatio;
+                srcX = (loadedImage.width - srcW) / 2;
+            } else {
+                srcH = loadedImage.width / targetRatio;
+                srcY = (loadedImage.height - srcH) / 2;
+            }
+
+            ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
+            ctx.drawImage(loadedImage, srcX, srcY, srcW, srcH, imgX, imgY, imgW, imgH);
+            ctx.filter = 'none';
+
+            var gradient = ctx.createRadialGradient(
+                imgX + imgW/2, imgY + imgH/2, imgW * 0.28, 
+                imgX + imgW/2, imgY + imgH/2, imgW * 0.5
+            );
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, baseColor);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(imgX, imgY, imgW, imgH);
+            ctx.restore();
+        }
+
+        // Настройка шрифта для ФИО
+        ctx.fillStyle = engraveKey === 'gold' ? '#ffd700' : '#dedede';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 72px ' + selectedFont;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 4;
+        ctx.shadowOffsetY = 4;
+
+        var fioValue = textFio.value || "ИВАНОВ
+ИВАН
+ИВАНОВИЧ";
+        var lines = fioValue.toUpperCase().split(/[\s
+]+/);
+        var startY = 1200 + (portraitYOffset * 0.4);
+        
+        for (var j = 0; j < lines.length; j++) {
+            ctx.fillText(lines[j], centerXFront, startY + (j * 100));
+        }
+
+        ctx.font = 'bold 56px ' + selectedFont;
+        var datesValue = textDates.value || "10.05.1950 — 22.11.2023";
+        ctx.fillText(datesValue, centerXFront, startY + (lines.length * 100) + 70);
+
+        // ПРАВАЯ ПОЛОВИНА: ОБРАТНАЯ СТОРОНА (2048..4096)
+        var backOffset = (currentShape === 'angel' && !customModelMesh) ? -320 : 0;
+        var centerXBack = 3072 + backOffset;
+
+        ctx.font = 'italic 64px ' + selectedFont;
+        var backValue = textBack.value || "Помним, любим, скорбим";
+        var backLines = backValue.split('
+');
+        var startYBack = 900 - (backLines.length * 50);
+
+        for (var k = 0; k < backLines.length; k++) {
+            ctx.fillText(backLines[k], centerXBack, startYBack + (k * 100));
+        }
+        
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        if (canvasTexture) {
+            canvasTexture.needsUpdate = true;
+        }
+
+        // Обновление параметров материала в Three.js под золото/белый
+        if (monumentMaterial) {
+            if (engraveKey === 'gold') {
+                monumentMaterial.metalness = 0.5;
+                monumentMaterial.roughness = 0.15;
+            } else {
+                monumentMaterial.metalness = 0.1;
+                monumentMaterial.roughness = 0.25;
+            }
+        }
+    }
+
+    // Инициализация Three.js сцены
+    var scene = new THREE.Scene();
+    
+    var camera = new THREE.PerspectiveCamera(45, previewBox.clientWidth / previewBox.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0.7, 4.6);
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(previewBox.clientWidth, previewBox.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    previewBox.appendChild(renderer.domElement);
+
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 2.0;
+    controls.maxDistance = 8.0;
+    controls.target.set(0, 0, 0);
+
+    var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 8, 6);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    var pointLight = new THREE.PointLight(0xffffff, 0.4, 10);
+    pointLight.position.set(-3, 3, 4);
+    scene.add(pointLight);
+
+    // Земля
+    var floorGeo = new THREE.PlaneGeometry(12, 12);
+    var floorMat = new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.85 });
+    var floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1.2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Цоколь (Постамент)
+    var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.6);
+    var baseMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.25, metalness: 0.1 });
+    var baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.set(0, -0.9, 0);
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    scene.add(baseMesh);
+
+    // Материалы
+    canvasTexture = new THREE.CanvasTexture(textureCanvas);
+    
+    var monumentMaterial = new THREE.MeshStandardMaterial({
+        map: canvasTexture,
+        roughness: 0.2,
+        metalness: 0.1
+    });
+
+    var sideMaterial = new THREE.MeshStandardMaterial({
+        color: 0x181818,
+        roughness: 0.25,
+        metalness: 0.1
+    });
+
+    function updateMaterialsColor() {
+        var stoneKey = materialSelector.value;
+        var hexColor = stoneColors[stoneKey] || stoneColors.gabbro;
+        var threeColor = new THREE.Color(hexColor);
+        
+        sideMaterial.color.copy(threeColor);
+        baseMat.color.copy(threeColor).multiplyScalar(0.7); // Цоколь делаем чуть темнее
+    }
+
+    // Построение геометрии встроенных форм с ЖЕСТКИМ КУПИРОВАНИЕМ ВЗЛЕТА
+    function rebuildMonumentGeometry() {
+        if (customModelMesh) {
+            scene.remove(customModelMesh);
+            customModelMesh = null;
+        }
+        if (steleMesh) scene.remove(steleMesh);
+
+        var width = 1.1;
+        var height = 1.6;
+        var shape = new THREE.Shape();
+        var currentShapeType = shapeSelector.value;
+
+        if (currentShapeType === 'arc') {
+            shape.moveTo(-width/2, -height/2);
+            shape.lineTo(-width/2, height/2 - width/2);
+            shape.absarc(0, height/2 - width/2, width/2, Math.PI, 0, true);
+            shape.lineTo(width/2, -height/2);
+            shape.closePath();
+        } else if (currentShapeType === 'angel') {
+            shape.moveTo(-width/2, -height/2);
+            shape.lineTo(-width/2, -0.4);
+            shape.quadraticCurveTo(-width/2 - 0.1, -0.1, -width/2 + 0.05, 0.2);
+            shape.quadraticCurveTo(-width/2 - 0.2, 0.4, -width/3, 0.6);
+            shape.quadraticCurveTo(-width/4, 0.7, -width/5, 0.75);
+            shape.absarc(-width/8, 0.65, 0.12, Math.PI, 0, true);
+            shape.quadraticCurveTo(0, 0.8, width/2, 0.8);
+            shape.lineTo(width/2, -height/2);
+            shape.closePath();
+        } else {
+            shape.moveTo(-width/2, -height/2);
+            shape.lineTo(-width/2, height/2);
+            shape.lineTo(width/2, height/2);
+            shape.lineTo(width/2, -height/2);
+            shape.closePath();
+        }
+
+        var extrudeSettings = {
+            depth: 0.12,
+            bevelEnabled: true,
+            bevelSegments: 4,
+            steps: 1,
+            bevelSize: 0.015,
+            bevelThickness: 0.015
+        };
+
+        var steleGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        
+        // Исправление UV проекции на фиксированные размеры
+        var uvAttribute = steleGeo.attributes.uv;
+        var posAttribute = steleGeo.attributes.position;
+
+        for (var i = 0; i < uvAttribute.count; i++) {
+            var posX = posAttribute.getX(i);
+            var posY = posAttribute.getY(i);
+            var posZ = posAttribute.getZ(i);
+            
+            // Опираемся на константные размеры 1.1 на 1.6 вместо плавающего BoundingBox
+            if (posZ > 0.11) {
+                var uFront = (posX - (-width/2)) / width * 0.5;
+                var vFront = (posY - (-height/2)) / height;
+                uvAttribute.setXY(i, uFront, vFront);
+            } else if (posZ < 0.01) {
+                var uBack = 0.5 + (1.0 - (posX - (-width/2)) / width) * 0.5;
+                var vBack = (posY - (-height/2)) / height;
+                uvAttribute.setXY(i, uBack, vBack);
+            } else {
+                uvAttribute.setXY(i, 0, 0);
+            }
+        }
+        uvAttribute.needsUpdate = true;
+        
+        // ---- ФИКС БАГА С ЗАВИСАНИЕМ В ВОЗДУХЕ ----
+        steleGeo.center(); // Центрируем по осям X и Z
+        steleGeo.computeBoundingBox();
+        var currentBbox = steleGeo.boundingBox;
+        
+        // Сдвигаем саму геометрию так, чтобы её низ по оси Y был точно в нуле
+        var minY = currentBbox.min.y;
+        steleGeo.translate(0, -minY, 0);
+
+        steleMesh = new THREE.Mesh(steleGeo, [monumentMaterial, sideMaterial]);
+        
+        // Ставим модель ровно на верхнюю грань подставки (высота подставки -0.8)
+        steleMesh.position.set(0, -0.8, 0);
+        
+        steleMesh.castShadow = true;
+        steleMesh.receiveShadow = true;
+        scene.add(steleMesh);
+    }
+
+    // Слушатели смены стандартных параметров
+    shapeSelector.onchange = function() {
+        rebuildMonumentGeometry();
+        updateMaterialsColor();
+        redrawTexture();
+    };
+
+    materialSelector.onchange = function() {
+        updateMaterialsColor();
+        redrawTexture();
+    };
+
+    decorSelector.onchange = redrawTexture;
+    engraveColorSelector.onchange = redrawTexture;
+    fontSelector.onchange = redrawTexture;
+    textFio.oninput = redrawTexture;
+    textDates.oninput = redrawTexture;
+    textBack.oninput = redrawTexture;
+
+    // Инициализация при старте
+    rebuildMonumentGeometry();
+    updateMaterialsColor();
+    redrawTexture();
+
+    // Загрузка фото портрета
+    fileInput.onchange = function(event) {
+        var files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                loadedImage = img;
+                redrawTexture();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(files[0]);
+    };
+
+    // Загрузка сторонних 3D-моделей (.GLB) с авто-заземлением дна на постамент
+    var gltfLoader = new THREE.GLTFLoader();
+    glbInput.onchange = function(event) {
+        var files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var contents = e.target.result;
+
+            gltfLoader.parse(contents, '', function(gltf) {
+                if (steleMesh) scene.remove(steleMesh);
+                if (customModelMesh) scene.remove(customModelMesh);
+
+                customModelMesh = gltf.scene;
+
+                // Назначаем кастомный материал холста на все внутренние сетки модели
+                customModelMesh.traverse(function(child) {
+                    if (child.isMesh) {
+                        child.material = monumentMaterial;
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                // Вычисляем размеры загруженной модели для точного заземления
+                var bbox = new THREE.Box3().setFromObject(customModelMesh);
+                var size = bbox.getSize(new THREE.Vector3());
+                var center = bbox.getCenter(new THREE.Vector3());
+
+                // Обнуляем X и Z позиции, а Y ставим так, чтобы низ модели встал на Y = -0.8 (верх постамента)
+                customModelMesh.position.x = -center.x;
+                customModelMesh.position.z = -center.z;
+                customModelMesh.position.y = -bbox.min.y - 0.8;
+
+                scene.add(customModelMesh);
+                redrawTexture();
+            }, function(error) {
+                alert("Ошибка чтения 3D файла. Убедитесь, что это корректный .glb");
+            });
+        };
+        reader.readAsArrayBuffer(files[0]);
+    };
+
+    // Кнопка скриншота
+    screenshotBtn.onclick = function() {
+        renderer.render(scene, camera);
+        var dataURL = renderer.domElement.toDataURL('image/png');
+        var link = document.createElement('a');
+        link.download = 'monument_3d_design.png';
+        link.href = dataURL;
+        link.click();
+    };
+
+    // Кнопка отправки на бэкенд / CRM
+    orderBtn.onclick = function() {
+        var orderData = {
+            shape: customModelMesh ? "Пользовательская .GLB модель" : shapeSelector.value,
+            granite_type: materialSelector.value,
+            decor: decorSelector.value,
+            engraving_color: engraveColorSelector.value,
+            font: fontSelector.value,
+            fio: textFio.value || "Иванов Иван Иванович",
+            dates: textDates.value || "10.05.1950 — 22.11.2023",
+            back_text: textBack.value || "Помним, любим, скорбим"
+        };
+        
+        alert("Данные макета успешно сформированы для отправки менеджеру:
+
+" + JSON.stringify(orderData, null, 2));
+    };
+
+    // Анимация сцены
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Защита от деформации 3D-окна при изменении размеров экрана
+    var resizeObserver = new ResizeObserver(function() {
+        if (previewBox.clientWidth && previewBox.clientHeight) {
+            camera.aspect = previewBox.clientWidth / previewBox.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(previewBox.clientWidth, previewBox.clientHeight);
+        }
+    });
+    resizeObserver.observe(previewBox);
+</script>
+</body>
+</html>
