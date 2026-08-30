@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Конструктор Памятника</title>
+    <title>Конструктор Памятника</title>
     <style>
         body {
             background-color: #f5f5f5;
@@ -22,7 +22,7 @@
         #main-container {
             display: flex;
             gap: 20px;
-            max-width: 1250px;
+            max-width: 1200px;
             width: 100%;
             background: white;
             padding: 20px;
@@ -30,20 +30,115 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             box-sizing: border-box;
         }
+        /* Окно просмотра */
         #monument-preview-box {
             flex: 2;
             height: 650px;
             background-color: #1a1a1a;
             border-radius: 12px;
-            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        }
+        /* Единая сборка для идеального выравнивания памятника строго по центру */
+        #monument-assembly {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        /* Памятник-Арка */
+        #stele {
+            width: 300px;
+            height: 480px;
+            background: linear-gradient(135deg, #1c1c1c 0%, #0d0d0d 40%, #1c1c1c 50%, #080808 60%, #111111 100%);
+            border-radius: 150px 150px 0 0;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 40px 15px 30px 15px;
             position: relative;
         }
-        #canvas-container {
+        /* Блик */
+        #stele::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 135px; width: 30px; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.05), rgba(255,255,255,0));
+            pointer-events: none;
+            z-index: 10;
+        }
+        /* Подставка */
+        #stone-base {
+            width: 360px;
+            height: 45px;
+            background: linear-gradient(to bottom, #2a2a2a 0%, #151515 20%, #080808 100%);
+            border: 2px solid #333;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            margin-top: -2px;
+        }
+        /* Контейнер для фото сверху */
+        #portrait-wrapper {
+            width: 140px;
+            height: 180px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: auto; /* Выталкивает текст вниз */
+            display: none; 
+            border-radius: 50%;
+        }
+        #portrait-img {
             width: 100%;
             height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%) contrast(150%) brightness(110%);
         }
+        /* Плавное растворение краев фото в камне */
+        #portrait-fade {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(19,19,19,0) 25%, rgba(19,19,19,0.5) 60%, rgba(19,19,19,1) 98%);
+        }
+        /* Текстовый блок строго внизу */
+        #text-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-top: auto; /* Прижимает текст к нижней части */
+        }
+        #display-fio {
+            color: #dedede;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            text-shadow: 1px 1px 1px #000, 1px 2px 0px #000;
+            white-space: pre-line;
+            font-family: 'Times New Roman', Georgia, serif;
+            width: 100%;
+        }
+        #display-dates {
+            color: #b8b8b8;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 1px #000;
+            font-family: 'Times New Roman', Georgia, serif;
+            width: 100%;
+        }
+        /* Панель настроек */
         #sidebar-controls {
-            width: 340px;
+            width: 320px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -71,7 +166,7 @@
             color: #666;
             font-weight: bold;
         }
-        input[type="text"] {
+        input[type="text"], select {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
@@ -101,19 +196,31 @@
             font-size: 12px;
             line-height: 1.4;
             text-align: center;
-            font-weight: bold;
         }
     </style>
-    <!-- Подключаем 3D-библиотеки через сверхнадежные и быстрые серверы Яндекса -->
-    <script src="https://yastatic.net"></script>
 </head>
 <body>
 
-<h1>Онлайн 3D-примерка гравировки на памятник</h1>
+<h1>Онлайн-примерка гравировки на памятник</h1>
 
 <div id="main-container">
     <div id="monument-preview-box">
-        <div id="canvas-container"></div>
+        <!-- Центрированная сборка стелы и тумбы -->
+        <div id="monument-assembly">
+            <div id="stele">
+                <!-- Портрет сверху -->
+                <div id="portrait-wrapper">
+                    <img id="portrait-img" src="" alt="Портрет">
+                    <div id="portrait-fade"></div>
+                </div>
+                <!-- Текст снизу -->
+                <div id="text-block">
+                    <div id="display-fio"></div>
+                    <div id="display-dates"></div>
+                </div>
+            </div>
+            <div id="stone-base"></div>
+        </div>
     </div>
     
     <div id="sidebar-controls">
@@ -124,7 +231,17 @@
         </div>
 
         <div class="input-group">
-            <span class="section-title">2. Гравировка текста</span>
+            <span class="section-title">2. Выбор шрифта</span>
+            <select id="font-selector">
+                <option value="'Times New Roman', Georgia, serif">Академический (с засечками)</option>
+                <option value="'Georgia', serif">Церковнославянский стиль</option>
+                <option value="'Arial Black', sans-serif">Прямой рубленый (Строгий)</option>
+                <option value="cursive, serif">Каллиграфический (Курсив)</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <span class="section-title">3. Гравировка текста</span>
             <label>Фамилия Имя Отчество</label>
             <input type="text" id="text-fio" placeholder="Иванов Иван Иванович">
         </div>
@@ -135,176 +252,52 @@
         </div>
 
         <div class="hint-box">
-            🔄 Зажмите мышку внутри черного окна и двигайте её, чтобы вращать памятник в 3D со всех сторон!
+            ⚙ Изменения текста и фотографий отображаются на памятнике мгновенно в реальном времени.
         </div>
     </div>
 </div>
 
 <script>
-    var container = document.getElementById('canvas-container');
-    var wrapper = document.getElementById('monument-preview-box');
+    var fileInput = document.getElementById('file-input');
+    var portraitWrapper = document.getElementById('portrait-wrapper');
+    var portraitImg = document.getElementById('portrait-img');
     
-    var inputFio = "";
-    var inputDates = "";
-    var userImage = null;
+    var textFio = document.getElementById('text-fio');
+    var textDates = document.getElementById('text-dates');
+    
+    var displayFio = document.getElementById('display-fio');
+    var displayDates = document.getElementById('display-dates');
+    var fontSelector = document.getElementById('font-selector');
 
-    // 1. Создание 3D сцены
-    var scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+    // Загрузка фото с точным индексированием
+    fileInput.onchange = function(event) {
+        var files = event.target.files;
+        if (!files || files.length === 0) return;
 
-    // Камера
-    var camera = new THREE.PerspectiveCamera(45, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
-    camera.position.set(0, 2.3, 5.5);
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            portraitImg.src = e.target.result;
+            portraitWrapper.style.display = 'block';
+        };
+        reader.readAsDataURL(files);
+    };
 
-    // Рендерер
-    var renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
+    // Изменение ФИО
+    textFio.oninput = function() {
+        displayFio.innerHTML = textFio.value.toUpperCase().split(" ").join("<br>");
+    };
 
-    // Вращение мыши ручным надежным способом без внешних скриптов управления
-    var theta = 0.4;
-    var phi = 0.2;
-    var isDragging = false;
-    var prevMouseX = 0;
-    var prevMouseY = 0;
+    // Изменение дат
+    textDates.oninput = function() {
+        displayDates.textContent = textDates.value;
+    };
 
-    wrapper.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        prevMouseX = e.clientX;
-        prevMouseY = e.clientY;
-    });
+    // Смена шрифтов
+    fontSelector.onchange = function() {
+        displayFio.style.fontFamily = fontSelector.value;
+        displayDates.style.fontFamily = fontSelector.value;
+    };
+</script>
 
-    window.addEventListener('mousemove', function(e) {
-        if (!isDragging) return;
-        var deltaX = e.clientX - prevMouseX;
-        var deltaY = e.clientY - prevMouseY;
-
-        theta -= deltaX * 0.01;
-        phi += deltaY * 0.01;
-        phi = Math.max(-0.3, Math.min(0.5, phi)); // Блокировка переворота камеры
-
-        prevMouseX = e.clientX;
-        prevMouseY = e.clientY;
-    });
-
-    window.addEventListener('mouseup', function() { isDragging = false; });
-
-    // Освещение сцены
-    var ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-
-    var dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(5, 10, 7);
-    scene.add(dirLight);
-
-    // Земля (Сетка плитки)
-    var floorGeo = new THREE.PlaneGeometry(20, 20);
-    var floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-    var floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-
-    // Виртуальный 2D холст для создания лица памятника
-    var textureCanvas = document.createElement('canvas');
-    var tCtx = textureCanvas.getContext('2d');
-    textureCanvas.width = 512;
-    textureCanvas.height = 512;
-
-    var steleTexture = new THREE.Texture(textureCanvas);
-
-    // Материал полированного черного гранита
-    var graniteMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111111,
-        roughness: 0.15,
-        metalness: 0.1
-    });
-
-    // Материал лицевой стороны стелы с текстурой
-    var faceMaterial = new THREE.MeshStandardMaterial({
-        map: steleTexture,
-        roughness: 0.15
-    });
-
-    // Назначаем материалы граням 3D куба [право, лево, верх, низ, лицо, зад]
-    var steleMaterials = [
-        graniteMaterial, graniteMaterial, graniteMaterial, graniteMaterial, faceMaterial, graniteMaterial
-    ];
-
-    // Геометрия 3D Стелы (Плиты)
-    var steleGeo = new THREE.BoxGeometry(1.2, 2.0, 0.25);
-    var stele = new THREE.Mesh(steleGeo, steleMaterials);
-    stele.position.y = 1.2;
-    scene.add(stele);
-
-    // Подставка под стелу (Тумба)
-    var baseGeo = new THREE.BoxGeometry(1.6, 0.2, 0.5);
-    var base = new THREE.Mesh(baseGeo, graniteMaterial);
-    base.position.y = 0.1;
-    scene.add(base);
-
-    // Обновление портрета и текста на памятнике
-    function updateMonumentTexture() {
-        tCtx.fillStyle = "#1c1c1c";
-        tCtx.fillRect(0, 0, 512, 512);
-
-        // Нанесение полированной фаски по контуру текстуры
-        tCtx.strokeStyle = "rgba(255,255,255,0.08)";
-        tCtx.lineWidth = 4;
-        tCtx.strokeRect(2, 2, 508, 508);
-
-        // Отрисовка портрета сверху
-        if (userImage) {
-            var aspect = userImage.width / userImage.height;
-            var w = 220; var h = w / aspect;
-            if (h > 250) { h = 240; w = h * aspect; }
-            var x = (512 - w) / 2; var y = 45;
-
-            var tempCanvas = document.createElement('canvas');
-            tempCanvas.width = w; tempCanvas.height = h;
-            var tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(userImage, 0, 0, w, h);
-
-            // Фильтр гравировки станка
-            var imgData = tempCtx.getImageData(0, 0, w, h);
-            var data = imgData.data;
-            for (var i = 0; i < data.length; i += 4) {
-                var b = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                b = b > 120 ? Math.min(255, b * 1.35) : Math.max(35, b * 0.35);
-                data[i] = b; data[i + 1] = b; data[i + 2] = b;
-            }
-            tempCtx.putImageData(imgData, 0, 0);
-
-            // Овальная растушевка
-            tCtx.save();
-            tCtx.beginPath(); tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2); tCtx.clip();
-            tCtx.drawImage(tempCanvas, x, y);
-            tCtx.restore();
-
-            tCtx.strokeStyle = "rgba(255,255,255,0.15)";
-            tCtx.lineWidth = 1;
-            tCtx.beginPath(); tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2); tCtx.stroke();
-        }
-
-        // Отрисовка ФИО и Дат строго внизу
-        tCtx.fillStyle = "#dedede";
-        tCtx.textAlign = "center";
-        tCtx.font = "bold 23px 'Times New Roman', Georgia, serif";
-
-        var lines = inputFio.toUpperCase().split(" ");
-        var startY = 340;
-        lines.forEach(function(line, index) {
-            var spacedLine = line.split("").join(" ");
-            tCtx.fillText(spacedLine, 256, startY + (index * 28));
-        });
-
-        tCtx.font = "bold 16px 'Times New Roman', Georgia, serif";
-        tCtx.fillStyle = "#b8b8b8";
-        tCtx.fillText(inputDates, 256, 465);
-
-        steleTexture.needsUpdate = true;
-    }
-
-    // Слушатели событий интерфейса
-    document.getElementById('file-input').onchange = function(e) {
-        var files = e.target.files;
+</body>
+</html>
