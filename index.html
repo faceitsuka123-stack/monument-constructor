@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Конструктор Памятника</title>
+    <title>3D Конструктор Памятника</title>
     <style>
         body {
             background-color: #f5f5f5;
@@ -30,161 +30,52 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             box-sizing: border-box;
         }
-        /* Окно просмотра */
         #monument-preview-box {
             flex: 2;
-            height: 680px;
+            height: 650px;
             background-color: #1a1a1a;
             border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+            cursor: move;
         }
-        /* Единая сборка для идеального выравнивания памятника строго по центру */
-        #monument-assembly {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
+        canvas {
+            background-color: #1a1a1a;
+            display: block;
+            border-radius: 8px;
         }
-        /* Фигурная стела-волна в точности как на вашем примере */
-        #stele {
-            width: 300px;
-            height: 480px;
-            background: linear-gradient(135deg, #1c1c1c 0%, #0d0d0d 40%, #1c1c1c 50%, #080808 60%, #111111 100%);
-            border-radius: 150px 150px 0 0;
-            border: 3px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            position: relative;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        /* Вертикальный глянцевый блик */
-        #stele::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 135px; width: 30px; height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.05), rgba(255,255,255,0));
-            pointer-events: none;
-            z-index: 10;
-        }
-        /* Подставка (тумба) */
-        #stone-base {
-            width: 360px;
-            height: 45px;
-            background: linear-gradient(to bottom, #2a2a2a 0%, #151515 20%, #080808 100%);
-            border: 2px solid #333;
-            border-top: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
-            border-radius: 4px;
-            margin-top: -2px;
-        }
-        /* Контейнер для портрета с ручным позиционированием */
-        #portrait-wrapper {
-            width: 140px;
-            height: 180px;
-            position: absolute;
-            top: 40px;
-            left: 80px; 
-            overflow: hidden;
-            display: none; 
-            border-radius: 50%;
-            z-index: 3;
-        }
-        #portrait-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: grayscale(100%) contrast(150%) brightness(110%);
-        }
-        /* Безопасная градиентная вуаль для растушевки краев фото */
-        #portrait-fade {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(19,19,19,0) 30%, rgba(19,19,19,0.5) 65%, rgba(19,19,19,1) 98%);
-        }
-        /* Текстовый блок с ручным позиционированием */
-        #text-block {
-            position: absolute;
-            bottom: 30px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 4;
-            pointer-events: none;
-        }
-        #display-fio {
-            color: #dedede;
-            text-align: center;
-            font-weight: bold;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            line-height: 1.4;
-            text-shadow: 1px 1px 1px #000, 1px 2px 0px #000;
-            white-space: pre-line;
-            font-family: 'Times New Roman', Georgia, serif;
-            width: 100%;
-        }
-        #display-dates {
-            color: #b8b8b8;
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            text-shadow: 1px 1px 1px #000;
-            font-family: 'Times New Roman', Georgia, serif;
-            width: 100%;
-        }
-        /* Панель настроек */
         #sidebar-controls {
-            flex: 1;
-            min-width: 340px;
-            max-width: 400px;
+            width: 340px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
             background: #fafafa;
             padding: 20px;
             border-radius: 12px;
             border: 1px solid #e0e0e0;
             box-sizing: border-box;
-            max-height: 680px;
-            overflow-y: auto;
         }
         .section-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
+            color: #444;
+            margin-bottom: 8px;
             border-bottom: 2px solid #ddd;
-            padding-bottom: 3px;
+            padding-bottom: 5px;
         }
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-        }
-        .slider-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-            color: #555;
-        }
-        .slider-group input {
-            flex: 1;
+            gap: 6px;
         }
         label {
-            font-size: 12px;
+            font-size: 13px;
             color: #666;
             font-weight: bold;
         }
-        input[type="text"], select {
+        input[type="text"] {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
@@ -206,29 +97,25 @@
         #file-input {
             display: none;
         }
+        .hint-box {
+            background: #e3f2fd;
+            color: #0d47a1;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<h1>Онлайн-примерка гравировки на памятник</h1>
+<h1>Онлайн 3D-примерка гравировки на памятник</h1>
 
 <div id="main-container">
     <div id="monument-preview-box">
-        <div id="monument-assembly">
-            <div id="stele">
-                <!-- Портрет -->
-                <div id="portrait-wrapper">
-                    <img id="portrait-img" src="" alt="Портрет">
-                    <div id="portrait-fade"></div>
-                </div>
-                <!-- Текст -->
-                <div id="text-block">
-                    <div id="display-fio"></div>
-                    <div id="display-dates"></div>
-                </div>
-            </div>
-            <div id="stone-base"></div>
-        </div>
+        <canvas id="monumentCanvas" width="450" height="600"></canvas>
     </div>
     
     <div id="sidebar-controls">
@@ -238,46 +125,8 @@
             <input type="file" id="file-input" accept="image/*">
         </div>
 
-        <!-- Настройка фотографии ползунками -->
         <div class="input-group">
-            <label>Размер фотографии</label>
-            <div class="slider-group">
-                <input type="range" id="photo-size" min="60" max="240" value="140">
-            </div>
-            <label>Положение фото (Выше / Ниже)</label>
-            <div class="slider-group">
-                <input type="range" id="photo-y" min="10" max="250" value="40">
-            </div>
-            <label>Положение фото (Левее / Правее)</label>
-            <div class="slider-group">
-                <input type="range" id="photo-x" min="0" max="240" value="80">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <span class="section-title">2. Выбор шрифта</span>
-            <select id="font-selector">
-                <option value="'Times New Roman', Georgia, serif">Академический (с засечками)</option>
-                <option value="'Georgia', serif">Церковнославянский стиль</option>
-                <option value="'Arial Black', sans-serif">Прямой рубленый (Строгий)</option>
-                <option value="cursive, serif">Каллиграфический (Курсив)</option>
-            </select>
-        </div>
-
-        <!-- Настройка текста ползунками -->
-        <div class="input-group">
-            <label>Размер букв (ФИО)</label>
-            <div class="slider-group">
-                <input type="range" id="text-size" min="12" max="35" value="18">
-            </div>
-            <label>Положение текста (Выше / Ниже)</label>
-            <div class="slider-group">
-                <input type="range" id="text-y" min="10" max="350" value="30">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <span class="section-title">3. Гравировка текста</span>
+            <span class="section-title">2. Гравировка текста</span>
             <label>Фамилия Имя Отчество</label>
             <input type="text" id="text-fio" placeholder="Иванов Иван Иванович">
         </div>
@@ -286,15 +135,144 @@
             <label>Даты жизни</label>
             <input type="text" id="text-dates" placeholder="10.05.1950 — 22.11.2023">
         </div>
+
+        <div class="hint-box">
+            🔄 Зажмите мышку на памятнике и двигайте её в стороны, чтобы вращать его в 3D!
+        </div>
     </div>
 </div>
 
 <script>
-    var fileInput = document.getElementById('file-input');
-    var portraitWrapper = document.getElementById('portrait-wrapper');
-    var portraitImg = document.getElementById('portrait-img');
-    
-    var textFio = document.getElementById('text-fio');
-    var textDates = document.getElementById('text-dates');
-    
-    var displayFio = document.getElementById('display-fio');
+    var canvas = document.getElementById('monumentCanvas');
+    var ctx = canvas.getContext('2d');
+    var previewBox = document.getElementById('monument-preview-box');
+
+    var inputFio = "";
+    var inputDates = "";
+    var userImage = null;
+
+    // Вращение 3D
+    var angleX = -0.3; 
+    var angleY = 0.5;  
+    var isDragging = false;
+    var previousMousePosition = { x: 0, y: 0 };
+
+    // Скрытый холст для текстуры лицевой части (512x512)
+    var textureCanvas = document.createElement('canvas');
+    textureCanvas.width = 512;
+    textureCanvas.height = 512;
+    var tCtx = textureCanvas.getContext('2d');
+
+    // Геометрия точек 3D
+    var nodes = [
+        // Стела (0-7)
+        {x: -55, y: -150, z: -15}, {x: 55, y: -150, z: -15}, {x: 55, y: 70, z: -15}, {x: -55, y: 70, z: -15},
+        {x: -55, y: -150, z: 15},  {x: 55, y: -150, z: 15},  {x: 55, y: 70, z: 15},  {x: -55, y: 70, z: 15},
+        // Тумба (8-15)
+        {x: -75, y: 70, z: -25},   {x: 75, y: 70, z: -25},   {x: 75, y: 95, z: -25},   {x: -75, y: 95, z: -25},
+        {x: -75, y: 70, z: 25},    {x: 75, y: 70, z: 25},    {x: 75, y: 95, z: 25},    {x: -75, y: 95, z: 25}
+    ];
+
+    function project(vertex) {
+        var x1 = vertex.x * Math.cos(angleY) - vertex.z * Math.sin(angleY);
+        var z1 = vertex.x * Math.sin(angleY) + vertex.z * Math.cos(angleY);
+        var y2 = vertex.y * Math.cos(angleX) - z1 * Math.sin(angleX);
+        var z2 = vertex.y * Math.sin(angleX) + z1 * Math.cos(angleX);
+        var distance = 450;
+        var scale = distance / (distance + z2) * 1.35;
+        return { x: x1 * scale + canvas.width / 2, y: y2 * scale + canvas.height / 2 + 20, z: z2 };
+    }
+
+    function updateTexture() {
+        tCtx.fillStyle = "#262626";
+        tCtx.fillRect(0, 0, 512, 512);
+
+        // Фотография сверху
+        if (userImage) {
+            var aspect = userImage.width / userImage.height;
+            var w = 150; var h = w / aspect;
+            if (h > 200) { h = 200; w = h * aspect; }
+            var x = (512 - w) / 2; var y = 50;
+
+            var tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w; tempCanvas.height = h;
+            var tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(userImage, 0, 0, w, h);
+
+            var imgData = tempCtx.getImageData(0, 0, w, h);
+            var data = imgData.data;
+            for (var i = 0; i < data.length; i += 4) {
+                var b = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                b = b > 120 ? Math.min(255, b * 1.4) : Math.max(45, b * 0.35);
+                data[i] = b; data[i + 1] = b; data[i + 2] = b;
+            }
+            tempCtx.putImageData(imgData, 0, 0);
+
+            tCtx.save();
+            tCtx.beginPath(); tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2); tCtx.clip();
+            tCtx.drawImage(tempCanvas, x, y);
+            tCtx.restore();
+
+            tCtx.strokeStyle = "rgba(255,255,255,0.2)";
+            tCtx.beginPath(); tCtx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2); tCtx.stroke();
+        }
+
+        // Текст строго снизу
+        tCtx.fillStyle = "#dedede";
+        tCtx.textAlign = "center";
+        tCtx.font = "bold 20px 'Times New Roman', Georgia, serif";
+
+        var lines = inputFio.toUpperCase().split(" ");
+        var startY = 320;
+        lines.forEach(function(line, index) {
+            var spacedLine = line.split("").join(" ");
+            tCtx.fillText(spacedLine, 256, startY + (index * 26));
+        });
+
+        tCtx.font = "bold 15px 'Times New Roman', Georgia, serif";
+        tCtx.fillStyle = "#b8b8b8";
+        tCtx.fillText(inputDates, 256, 450);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Рисуем сетку земли
+        ctx.strokeStyle = '#2b2b2b';
+        ctx.lineWidth = 1;
+        for(var i = -4; i <= 4; i++) {
+            var p1 = project({x: i*50, y: 95, z: -160}); var p2 = project({x: i*50, y: 95, z: 160});
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            var p3 = project({x: -160, y: 95, z: i*50}); var p4 = project({x: 160, y: 95, z: i*50});
+            ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+        }
+
+        var p = nodes.map(project);
+
+        // Построение полигонов по индексам в явном виде текстом, чтобы скрипт не скрывал их
+        var polygons = [
+            { idx:, color: '#1a1a1a', isFace: false }, // Зад стелы
+            { idx:, color: '#333333', isFace: false }, // Право стелы
+            { idx:, color: '#151515', isFace: false }, // Лево стелы
+            { idx:, color: '#444444', isFace: false }, // Верх стелы
+            { idx:, color: '#262626', isFace: true },  // ЛИЦО СТЕЛЫ
+            { idx:, color: '#121212', isFace: false }, // Зад тумбы
+            { idx:, color: '#222222', isFace: false }, // Право тумбы
+            { idx:, color: '#0f0f0f', isFace: false }, // Лево тумбы
+            { idx:, color: '#282828', isFace: false }, // Верх тумбы
+            { idx:, color: '#1c1c1c', isFace: false } // Лицо тумбы
+        ];
+
+        // Расчет глубины
+        polygons.forEach(function(poly) {
+            poly.avgZ = (p[poly.idx[0]].z + p[poly.idx[1]].z + p[poly.idx[2]].z + p[poly.idx[3]].z) / 4;
+        });
+        polygons.sort(function(a, b) { return b.avgZ - a.avgZ; });
+
+        // Отрисовка граней памятника
+        polygons.forEach(function(poly) {
+            ctx.fillStyle = poly.color;
+            ctx.beginPath();
+            ctx.moveTo(p[poly.idx[0]].x, p[poly.idx[0]].y);
+            ctx.lineTo(p[poly.idx[1]].x, p[poly.idx[1]].y);
+            ctx.lineTo(p[poly.idx[2]].x, p[poly.idx[2]].y);
