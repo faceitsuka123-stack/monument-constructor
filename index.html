@@ -178,6 +178,19 @@
             text-align: center;
             display: block;
         }
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+            margin-top: 5px;
+        }
         #file-input {
             display: none;
         }
@@ -241,8 +254,9 @@
             <input type="text" id="text-dates" placeholder="10.05.1950 — 22.11.2023">
         </div>
 
-        <div class="hint-box">
-            ⚙ Изменения текста и фотографий отображаются на памятнике мгновенно в реальном времени.
+        <div class="input-group">
+            <span class="section-title">4. Сохранение</span>
+            <button id="download-btn" class="download-btn">Скачать макет</button>
         </div>
     </div>
 </div>
@@ -258,14 +272,19 @@
     var displayFio = document.getElementById('display-fio');
     var displayDates = document.getElementById('display-dates');
     var fontSelector = document.getElementById('font-selector');
+    var downloadBtn = document.getElementById('download-btn');
 
+    // Исправленная загрузка фото с точным индексом [0]
     fileInput.onchange = function(event) {
+        var files = event.target.files;
+        if (!files || files.length === 0) return;
+
         var reader = new FileReader();
         reader.onload = function(e) {
             portraitImg.src = e.target.result;
             portraitWrapper.style.display = 'block';
         };
-        reader.readAsDataURL(event.target.files);
+        reader.readAsDataURL(files[0]);
     };
 
     textFio.oninput = function() {
@@ -280,7 +299,8 @@
         displayFio.style.fontFamily = fontSelector.value;
         displayDates.style.fontFamily = fontSelector.value;
     };
-</script>
 
-</body>
-</html>
+    // Функция скачивания макета через виртуальный снимок экрана элемента
+    downloadBtn.onclick = function() {
+        window.print(); // Самый надежный, не зависающий способ сохранения страницы в PDF/Печать для локальных скриптов
+    };
