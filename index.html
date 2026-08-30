@@ -82,15 +82,15 @@
             border-radius: 4px;
             margin-top: -2px;
         }
-        /* Контейнер для фото сверху */
+        /* Контейнер для фото сверху — ТЕПЕРЬ ОН ВКЛЮЧЕН ИЗНАЧАЛЬНО */
         #portrait-wrapper {
             width: 140px;
             height: 180px;
             position: relative;
             overflow: hidden;
             margin-bottom: auto; /* Выталкивает текст вниз */
-            display: none; 
             border-radius: 50%;
+            opacity: 0; /* Делаем невидимым, пока не загружен файл */
         }
         #portrait-img {
             width: 100%;
@@ -205,7 +205,6 @@
 
 <div id="main-container">
     <div id="monument-preview-box">
-        <!-- Центрированная сборка стелы и тумбы -->
         <div id="monument-assembly">
             <div id="stele">
                 <!-- Портрет сверху -->
@@ -269,7 +268,7 @@
     var displayDates = document.getElementById('display-dates');
     var fontSelector = document.getElementById('font-selector');
 
-    // Загрузка фото с точным индексированием
+    // Безотказный метод проявления картинки
     fileInput.onchange = function(event) {
         var files = event.target.files;
         if (!files || files.length === 0) return;
@@ -277,9 +276,9 @@
         var reader = new FileReader();
         reader.onload = function(e) {
             portraitImg.src = e.target.result;
-            portraitWrapper.style.display = 'block';
+            portraitWrapper.style.opacity = '1'; // Делаем блок видимым
         };
-        reader.readAsDataURL(files);
+        reader.readAsDataURL(files[0]); // Явно указан индекс первого файла
     };
 
     // Изменение ФИО
