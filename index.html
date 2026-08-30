@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Конструктор Памятника</title>
+    <title>Онлайн-примерка памятника</title>
     <style>
         body {
             background-color: #f5f5f5;
@@ -129,48 +129,46 @@
             <input type="file" id="file-input" accept="image/*">
         </div>
 
-        <!-- ПОЛЗУНКИ УПРАВЛЕНИЯ ПОРТРЕТОМ -->
         <div class="input-group">
             <label>Размер фотографии</label>
             <div class="slider-group">
-                <input type="range" id="photo-size" min="60" max="220" value="150">
+                <input type="range" id="photo-size" min="60" max="220" value="140">
             </div>
             <label>Положение фото (Выше / Ниже)</label>
             <div class="slider-group">
-                <input type="range" id="photo-y" min="20" max="300" value="90">
+                <input type="range" id="photo-y" min="20" max="300" value="140">
             </div>
             <label>Положение фото (Левее / Правее)</label>
             <div class="slider-group">
-                <input type="range" id="photo-x" min="50" max="300" value="225">
+                <input type="range" id="photo-x" min="50" max="400" value="225">
             </div>
         </div>
 
         <div class="input-group">
             <span class="section-title">2. Выбор шрифта</span>
             <select id="font-selector">
-                <option value="bold 19px 'Times New Roman', Georgia, serif">Академический (с засечками)</option>
-                <option value="bold 20px 'Georgia', serif">Церковнославянский стиль</option>
-                <option value="bold 17px 'Arial Black', Gadget, sans-serif">Прямой рубленый (Строгий)</option>
-                <option value="italic bold 20px 'Comic Sans MS', cursive, serif">Каллиграфический (Курсив)</option>
+                <option value="'Times New Roman', Georgia, serif">Академический (с засечками)</option>
+                <option value="'Georgia', serif">Церковнославянский стиль</option>
+                <option value="'Arial Black', sans-serif">Прямой рубленый (Строгий)</option>
+                <option value="'Courier New', monospace">Каллиграфический (Курсив)</option>
             </select>
         </div>
 
-        <!-- ПОЛЗУНКИ УПРАВЛЕНИЯ ТЕКСТОМ -->
         <div class="input-group">
             <label>Размер букв (ФИО)</label>
             <div class="slider-group">
-                <input type="range" id="text-size" min="12" max="35" value="19">
+                <input type="range" id="text-size" min="12" max="35" value="18">
             </div>
             <label>Положение текста (Выше / Ниже)</label>
             <div class="slider-group">
-                <input type="range" id="text-y" min="250" max="520" value="360">
+                <input type="range" id="text-y" min="250" max="520" value="380">
             </div>
         </div>
 
         <div class="input-group">
             <span class="section-title">3. Гравировка текста</span>
             <label>Фамилия Имя Отчество</label>
-            <input type="text" id="text-fio" placeholder="БАРАНОВСКАЯ ЮЛИЯ">
+            <input type="text" id="text-fio" placeholder="ИВАНОВА ЮЛИЯ">
         </div>
 
         <div class="input-group">
@@ -187,9 +185,8 @@
     var inputFio = "";
     var inputDates = "";
     var sourceImage = null;
-    var selectedFont = "bold 19px 'Times New Roman', Georgia, serif";
+    var selectedFontFamily = "'Times New Roman', Georgia, serif";
 
-    // Переменные с ползунков
     var sliderPhotoSize = document.getElementById('photo-size');
     var sliderPhotoX = document.getElementById('photo-x');
     var sliderPhotoY = document.getElementById('photo-y');
@@ -200,7 +197,7 @@
     function renderMonument() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 1. Подставка (тумба)
+        // 1. Рисуем подставку (тумбу)
         let baseGrad = ctx.createLinearGradient(40, 530, 40, 580);
         baseGrad.addColorStop(0, '#2a2a2a');
         baseGrad.addColorStop(0.2, '#151515');
@@ -218,7 +215,7 @@
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(25, 580, 400, 12);
 
-        // 2. Фигурная стела
+        // 2. Рисуем фигурную стелу
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(85, 530);
@@ -243,7 +240,7 @@
         ctx.stroke();
         ctx.restore();
 
-        // 3. Обработка и растушевка фото (Теперь getImageData разрешен браузером!)
+        // 3. Рисуем и обрабатываем портрет
         if (sourceImage) {
             let pSize = parseInt(sliderPhotoSize.value);
             let pX = parseInt(sliderPhotoX.value);
@@ -259,7 +256,6 @@
             let tCtx = tempCanvas.getContext('2d');
             tCtx.drawImage(sourceImage, 0, 0, w, h);
 
-            // Настоящий алгоритм гравировки по пикселям
             try {
                 let imgData = tCtx.getImageData(0, 0, w, h);
                 let data = imgData.data;
@@ -269,9 +265,8 @@
                     data[i] = b * 0.93; data[i + 1] = b * 0.95; data[i + 2] = b * 0.97;
                 }
                 tCtx.putImageData(imgData, 0, 0);
-            } catch(e) { console.log("Ошибка обработки пикселей"); }
+            } catch(e) { console.log(e); }
 
-            // Плавная растушевка краев
             let maskCanvas = document.createElement('canvas');
             maskCanvas.width = w;
             maskCanvas.height = h;
@@ -283,3 +278,17 @@
             maskGrad.addColorStop(0, 'rgba(0,0,0,0)');
             maskGrad.addColorStop(0.7, 'rgba(0,0,0,0.6)');
             maskGrad.addColorStop(1, 'rgba(0,0,0,1)');
+            mCtx.fillStyle = maskGrad;
+            mCtx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(maskCanvas, pX - w/2, pY - h/2);
+            ctx.restore();
+        }
+
+        // 4. Отрисовка текста гравировки
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.shadowColor = "#000000";
+        ctx.shadowBlur = 1;
